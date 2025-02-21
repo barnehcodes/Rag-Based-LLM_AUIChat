@@ -1,5 +1,5 @@
 ---
-title: Gradio Chatbot
+title: AUIChat
 emoji: 💬
 colorFrom: yellow
 colorTo: purple
