@@ -1,18 +1,14 @@
 import os
-from huggingface_hub import login
+import requests
 from PyPDF2 import PdfReader
-from transformers import AutoModelForCausalLM, AutoTokenizer
 from sentence_transformers import SentenceTransformer
-import faiss # Use FAISS CPU
+import faiss
 import numpy as np
 import gradio as gr
-import torch
 
-# Authenticate with Hugging Face using the secret
-login(token=os.environ.get("HF_TOKEN"))
-
-# Debug: Check if files exist
-print("Files in directory:", os.listdir("."))
+# Hugging Face Inference API settings
+API_URL = "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.1"
+headers = {"Authorization": f"Bearer {os.environ.get('HF_TOKEN')}"}
 
 # Step 1: Extract text from PDFs
 def extract_text_from_pdf(pdf_path):
@@ -29,18 +25,7 @@ counseling_faq_text = extract_text_from_pdf("Counseling Services FAQ Spring 2024
 # Combine all texts into a single knowledge base
 knowledge_base = counseling_faq_text + "\n" + pip_requirements_text
 
-# Step 2: Load Mistral 7B without quantization
-model_name = "mistralai/Mistral-7B-Instruct-v0.1"
-tokenizer = AutoTokenizer.from_pretrained(model_name, padding_side="left")
-tokenizer.pad_token = tokenizer.eos_token
-
-# Load the model on CPU
-model = AutoModelForCausalLM.from_pretrained(
-    model_name,
-    low_cpu_mem_usage=True,  # Optimize for CPU
-)
-
-# Step 3: Set up retrieval
+# Step 2: Set up retrieval
 # Split the knowledge base into chunks (e.g., paragraphs or sentences)
 knowledge_chunks = knowledge_base.split("\n")
 
@@ -52,14 +37,14 @@ chunk_embeddings = embedder.encode(knowledge_chunks)
 index = faiss.IndexFlatL2(chunk_embeddings.shape[1])  # L2 distance
 index.add(chunk_embeddings)
 
-# Step 4: Define the retrieval function
+# Step 3: Define the retrieval function
 def retrieve_relevant_chunks(query, top_k=5):
     query_embedding = embedder.encode([query])
     distances, indices = index.search(query_embedding, top_k)
     relevant_chunks = [knowledge_chunks[i] for i in indices[0]]
     return relevant_chunks
 
-# Step 5: Define the response generation function
+# Step 4: Define the response generation function using the Inference API
 def generate_response(query):
     # Retrieve relevant chunks
     relevant_chunks = retrieve_relevant_chunks(query, top_k=3)
@@ -72,13 +57,16 @@ def generate_response(query):
 
     # Combine query and context for Mistral 7B
     input_text = f"Context: {context}\n\nQuestion: {query}"
-    inputs = tokenizer(input_text, return_tensors="pt", truncation=True, max_length=512)
-    outputs = model.generate(**inputs, max_length=128)  # Generate shorter responses
-    response = tokenizer.decode(outputs[0], skip_special_tokens=True)
 
-    return response
+    # Send the input to the Hugging Face Inference API
+    payload = {"inputs": input_text}
+    response = requests.post(API_URL, headers=headers, json=payload)
+    if response.status_code == 200:
+        return response.json()[0]["generated_text"]
+    else:
+        return f"Error: {response.status_code}, {response.text}"
 
-# Step 6: Create Gradio UI
+# Step 5: Create Gradio UI
 def chatbot_interface(query):
     return generate_response(query)
 
