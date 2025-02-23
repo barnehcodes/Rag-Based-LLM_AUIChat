@@ -9,9 +9,9 @@ import torch
 import os
 from huggingface_hub import login
 
-# Log in to Hugging Face
-login(token="HF_TOKEN")
 
+# Authenticate with Hugging Face using the secret
+login(token=os.environ.get("HF_TOKEN"))
 
 # Step 1: Extract text from PDFs
 def extract_text_from_pdf(pdf_path):
