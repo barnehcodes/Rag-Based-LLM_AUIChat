@@ -3,7 +3,7 @@ from huggingface_hub import login
 from PyPDF2 import PdfReader
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from sentence_transformers import SentenceTransformer
-import faiss_cpu as faiss  # Use FAISS CPU
+import faiss # Use FAISS CPU
 import numpy as np
 import gradio as gr
 import torch
