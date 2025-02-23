@@ -37,7 +37,6 @@ tokenizer.pad_token = tokenizer.eos_token
 # Load the model on CPU
 model = AutoModelForCausalLM.from_pretrained(
     model_name,
-    device_map="auto",
     low_cpu_mem_usage=True,  # Optimize for CPU
 )
 
