@@ -5,3 +5,4 @@ faiss-gpu>=1.7.0
 gradio>=3.0.0
 pypdf>=3.0.0
 bitsandbytes>=0.40.0
+PyPDF2
