@@ -2,7 +2,7 @@ PyPDF2
 torch>=2.0.0
 transformers>=4.30.0
 sentence-transformers>=2.2.0
-faiss-cpu>=1.7.4 # Use FAISS CPU
+faiss-cpu  # Use FAISS CPU
 gradio>=3.0.0
 pypdf>=3.0.0
 numpy<2
