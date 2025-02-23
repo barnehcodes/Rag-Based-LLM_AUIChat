@@ -7,7 +7,7 @@ import numpy as np
 import gradio as gr
 
 # Hugging Face Inference API settings
-API_URL = "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.1"
+API_URL = "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.3"
 headers = {"Authorization": f"Bearer {os.environ.get('HF_TOKEN')}"}
 
 # Step 1: Extract text from PDFs
