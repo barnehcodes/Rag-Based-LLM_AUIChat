@@ -1,64 +1,102 @@
+from PyPDF2 import PdfReader
+from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
+from sentence_transformers import SentenceTransformer
+import faiss
+import numpy as np
 import gradio as gr
-from huggingface_hub import InferenceClient
+import torch
 
-"""
-For more information on `huggingface_hub` Inference API support, please check the docs: https://huggingface.co/docs/huggingface_hub/v0.22.2/en/guides/inference
-"""
-client = InferenceClient("HuggingFaceH4/zephyr-7b-beta")
+# Step 1: Extract text from PDFs
+def extract_text_from_pdf(pdf_path):
+    reader = PdfReader(pdf_path)
+    text = ""
+    for page in reader.pages:
+        text += page.extract_text()
+    return text
 
+# Extract text from your PDFs
+pip_requirements_text = extract_text_from_pdf("PiP 24-25 Program Requirements.pdf")
+counseling_faq_text = extract_text_from_pdf("Counseling Services FAQ Spring 2024.pdf")
 
-def respond(
-    message,
-    history: list[tuple[str, str]],
-    system_message,
-    max_tokens,
-    temperature,
-    top_p,
-):
-    messages = [{"role": "system", "content": system_message}]
+# Combine all texts into a single knowledge base
+knowledge_base = counseling_faq_text + "\n" + pip_requirements_text
 
-    for val in history:
-        if val[0]:
-            messages.append({"role": "user", "content": val[0]})
-        if val[1]:
-            messages.append({"role": "assistant", "content": val[1]})
-
-    messages.append({"role": "user", "content": message})
-
-    response = ""
-
-    for message in client.chat_completion(
-        messages,
-        max_tokens=max_tokens,
-        stream=True,
-        temperature=temperature,
-        top_p=top_p,
-    ):
-        token = message.choices[0].delta.content
-
-        response += token
-        yield response
-
-
-"""
-For information on how to customize the ChatInterface, peruse the gradio docs: https://www.gradio.app/docs/chatinterface
-"""
-demo = gr.ChatInterface(
-    respond,
-    additional_inputs=[
-        gr.Textbox(value="You are a friendly Chatbot.", label="System message"),
-        gr.Slider(minimum=1, maximum=2048, value=512, step=1, label="Max new tokens"),
-        gr.Slider(minimum=0.1, maximum=4.0, value=0.7, step=0.1, label="Temperature"),
-        gr.Slider(
-            minimum=0.1,
-            maximum=1.0,
-            value=0.95,
-            step=0.05,
-            label="Top-p (nucleus sampling)",
-        ),
-    ],
+# Step 2: Configure 8-bit quantization
+quantization_config = BitsAndBytesConfig(
+    load_in_8bit=True,  # Enable 8-bit quantization
 )
 
+# Load Mistral 7B with 8-bit quantization
+model_name = "mistralai/Mistral-7B-Instruct-v0.1"
+tokenizer = AutoTokenizer.from_pretrained(model_name, padding_side="left")
+tokenizer.pad_token = tokenizer.eos_token
 
-if __name__ == "__main__":
-    demo.launch()
+# Load the model with quantization
+model = AutoModelForCausalLM.from_pretrained(
+    model_name,
+    device_map="auto",
+    quantization_config=quantization_config,  # Pass the quantization config
+)
+
+# Step 3: Set up retrieval
+# Split the knowledge base into chunks (e.g., paragraphs or sentences)
+knowledge_chunks = knowledge_base.split("\n")
+
+# Encode the chunks using a sentence transformer
+embedder = SentenceTransformer("all-MiniLM-L6-v2")
+chunk_embeddings = embedder.encode(knowledge_chunks)
+
+# Create a FAISS index
+index = faiss.IndexFlatL2(chunk_embeddings.shape[1])  # L2 distance
+index.add(chunk_embeddings)
+
+# Step 4: Define the retrieval function
+def retrieve_relevant_chunks(query, top_k=5):
+    query_embedding = embedder.encode([query])
+    distances, indices = index.search(query_embedding, top_k)
+    relevant_chunks = [knowledge_chunks[i] for i in indices[0]]
+    return relevant_chunks
+
+# Step 5: Define the response generation function
+def generate_response(query):
+    # Retrieve relevant chunks
+    relevant_chunks = retrieve_relevant_chunks(query, top_k=3)
+    context = "\n".join(relevant_chunks)
+
+    # Truncate the context if it's too long
+    max_context_length = 256  # Adjust as needed
+    if len(context) > max_context_length:
+        context = context[:max_context_length]
+
+    # Combine query and context for Mistral 7B
+    input_text = f"Context: {context}\n\nQuestion: {query}"
+    inputs = tokenizer(input_text, return_tensors="pt", truncation=True, max_length=512).to("cuda")
+    outputs = model.generate(**inputs, max_length=128)  # Generate shorter responses
+    response = tokenizer.decode(outputs[0], skip_special_tokens=True)
+
+    return response
+
+# Step 6: Create Gradio UI
+def chatbot_interface(query):
+    return generate_response(query)
+
+# Suggested queries for quick testing
+suggested_queries = [
+    "Who can use AUI Counseling Services?",
+    "What are the eligibility requirements for the PiP program?",
+    "What types of counseling services are available at AUI?",
+    "How do I set up an appointment with a counselor?",
+]
+
+# Gradio interface
+interface = gr.Interface(
+    fn=chatbot_interface,
+    inputs=gr.Textbox(lines=2, placeholder="Ask a question..."),
+    outputs=gr.Textbox(lines=4, label="Chatbot Response"),
+    title="University Chatbot",
+    description="Ask questions about university services and programs.",
+    examples=suggested_queries,
+)
+
+# Launch the interface
+interface.launch()
