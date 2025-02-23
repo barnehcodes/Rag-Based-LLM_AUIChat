@@ -6,6 +6,9 @@ import numpy as np
 import gradio as gr
 import torch
 
+import os
+
+
 # Step 1: Extract text from PDFs
 def extract_text_from_pdf(pdf_path):
     reader = PdfReader(pdf_path)
@@ -14,9 +17,16 @@ def extract_text_from_pdf(pdf_path):
         text += page.extract_text()
     return text
 
+# Debug: Check if files exist
+print("Files in directory:", os.listdir("/home/user/app/"))
+
 # Extract text from your PDFs
-pip_requirements_text = extract_text_from_pdf("PiP 24-25 Program Requirements.pdf")
-counseling_faq_text = extract_text_from_pdf("Counseling Services FAQ Spring 2024.pdf")
+pip_requirements_text = extract_text_from_pdf("/home/user/app/PiP 24-25 Program Requirements.pdf")
+counseling_faq_text = extract_text_from_pdf("/home/user/app/Counseling Services FAQ Spring 2024.pdf")
+
+# # Extract text from your PDFs
+# pip_requirements_text = extract_text_from_pdf("PiP 24-25 Program Requirements.pdf")
+# counseling_faq_text = extract_text_from_pdf("Counseling Services FAQ Spring 2024.pdf")
 
 # Combine all texts into a single knowledge base
 knowledge_base = counseling_faq_text + "\n" + pip_requirements_text
