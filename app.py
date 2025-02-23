@@ -7,7 +7,14 @@ import gradio as gr
 import torch
 
 import os
+from huggingface_hub import login
+from dotenv import load_dotenv
 
+# Log in to Hugging Face
+# Load environment variables from .env file
+load_dotenv()
+Access_Token = os.getenv("Access_Token")
+login(token=Access_Token)
 
 # Step 1: Extract text from PDFs
 def extract_text_from_pdf(pdf_path):
