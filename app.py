@@ -1,17 +1,18 @@
+import os
+from huggingface_hub import login
 from PyPDF2 import PdfReader
-from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
+from transformers import AutoModelForCausalLM, AutoTokenizer
 from sentence_transformers import SentenceTransformer
-import faiss
+import faiss_cpu as faiss  # Use FAISS CPU
 import numpy as np
 import gradio as gr
 import torch
 
-import os
-from huggingface_hub import login
-
-
 # Authenticate with Hugging Face using the secret
 login(token=os.environ.get("HF_TOKEN"))
+
+# Debug: Check if files exist
+print("Files in directory:", os.listdir("."))
 
 # Step 1: Extract text from PDFs
 def extract_text_from_pdf(pdf_path):
@@ -21,35 +22,23 @@ def extract_text_from_pdf(pdf_path):
         text += page.extract_text()
     return text
 
-# Debug: Check if files exist
-print("Files in directory:", os.listdir("/home/user/app/"))
-
 # Extract text from your PDFs
-pip_requirements_text = extract_text_from_pdf("/home/user/app/PiP 24-25 Program Requirements.pdf")
-counseling_faq_text = extract_text_from_pdf("/home/user/app/Counseling Services FAQ Spring 2024.pdf")
-
-# # Extract text from your PDFs
-# pip_requirements_text = extract_text_from_pdf("PiP 24-25 Program Requirements.pdf")
-# counseling_faq_text = extract_text_from_pdf("Counseling Services FAQ Spring 2024.pdf")
+pip_requirements_text = extract_text_from_pdf("PiP 24-25 Program Requirements.pdf")
+counseling_faq_text = extract_text_from_pdf("Counseling Services FAQ Spring 2024.pdf")
 
 # Combine all texts into a single knowledge base
 knowledge_base = counseling_faq_text + "\n" + pip_requirements_text
 
-# Step 2: Configure 8-bit quantization
-quantization_config = BitsAndBytesConfig(
-    load_in_8bit=True,  # Enable 8-bit quantization
-)
-
-# Load Mistral 7B with 8-bit quantization
+# Step 2: Load Mistral 7B without quantization
 model_name = "mistralai/Mistral-7B-Instruct-v0.1"
 tokenizer = AutoTokenizer.from_pretrained(model_name, padding_side="left")
 tokenizer.pad_token = tokenizer.eos_token
 
-# Load the model with quantization
+# Load the model on CPU
 model = AutoModelForCausalLM.from_pretrained(
     model_name,
     device_map="auto",
-    quantization_config=quantization_config,  # Pass the quantization config
+    low_cpu_mem_usage=True,  # Optimize for CPU
 )
 
 # Step 3: Set up retrieval
@@ -84,7 +73,7 @@ def generate_response(query):
 
     # Combine query and context for Mistral 7B
     input_text = f"Context: {context}\n\nQuestion: {query}"
-    inputs = tokenizer(input_text, return_tensors="pt", truncation=True, max_length=512).to("cuda")
+    inputs = tokenizer(input_text, return_tensors="pt", truncation=True, max_length=512)
     outputs = model.generate(**inputs, max_length=128)  # Generate shorter responses
     response = tokenizer.decode(outputs[0], skip_special_tokens=True)
 
