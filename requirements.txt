@@ -7,3 +7,4 @@ pypdf>=3.0.0
 bitsandbytes>=0.40.0
 PyPDF2
 numpy<2 
+accelerate>=0.26.0  
