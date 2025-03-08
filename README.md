@@ -60,7 +60,7 @@ This report outlines the progress made in **Milestone 3: Data Acquisition and Pr
 
 ## **3. Pipeline Components** 
 
-![Pipeline Diagram](Pipeline Structure and Components.png)
+![Pipeline Diagram](Rag-Based-LLM_AUIChat/Pipeline Structure and Components.png)
 
 ### ✅ **3.1 Setup of Data Pipeline Within the ML Pipeline / MLOps Platform**
 
