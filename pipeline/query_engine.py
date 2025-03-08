@@ -59,10 +59,10 @@ def query_qdrant(query_text, limit=5):
 def create_query_engine(query_text):
     """Create a query engine for proper RAG queries using Hugging Face Inference API."""
     # Initialize LLM to use the Inference API; ensure your API token is set in HUGGINGFACEHUB_API_TOKEN
-    api_key = os.getenv("HUGGING_FACE_API_KEY")
+    #api_key = os.getenv("HUGGING_FACE_API_KEY")
     llm = HuggingFaceInferenceAPI(
         model_name="mistralai/Mistral-7B-Instruct-v0.3", 
-        token=api_key
+        token=#API TOKEN
     )
     from llama_index.core import Settings
     

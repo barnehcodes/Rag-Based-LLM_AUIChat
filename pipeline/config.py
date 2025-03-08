@@ -8,11 +8,11 @@ import os
 QDRANT_HOST = "40003a30-70d7-4886-9de5-45e25681c36e.europe-west3-0.gcp.cloud.qdrant.io"
 COLLECTION_NAME = "AUIChatVectoreCol"
 
-QR_api_key = os.getenv("QDRANT_API_KEY")
+#QR_api_key = os.getenv("QDRANT_API_KEY")
 # Connect to Qdrant
 qdrant_client = QdrantClient(
     host=QDRANT_HOST,
-    api_key=QR_api_key,
+    api_key=#API TOKEN,
     https=True
 )
 
