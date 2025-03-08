@@ -1,79 +1,104 @@
-# ML Pipeline Development - From a Monolith to a Pipeline (Milestones 3)
+# **ML Pipeline Development - Milestone 3 Report**
 
-## 2.1 Ensuring ML Pipeline Reproducibility (Milestone 3)
+## **1. Introduction**
 
-### ✅ Ensuring Pipeline Reproducibility
+This report outlines the progress made in **Milestone 3: Data Acquisition and Preparation** as part of the larger **ML Pipeline Development** for AUIChat, a RAG-based chatbot. This milestone involved structuring the data pipeline, implementing data validation, preprocessing, embedding generation, and storage. Additionally, the pipeline was integrated into ZenML to enhance reproducibility and scalability.
 
-- **Project Setup and Reproducible Environment**
-  - Established reproducibility through Python virtual environments managed by `venv` and documented dependencies via `requirements.txt`.
+## **2. Ensuring ML Pipeline Reproducibilit** 
 
-- **Data Versioning:**
-  - Implemented DVC (Data Version Control) to version-control dataset files, document chunks, and embeddings.
-  - Integrated DVC with Git to track changes in datasets separately from source code.
 
-- **Machine Learning Pipeline Setup:**
-  - Adopted ZenML to orchestrate the ML pipeline, ensuring modularity, reproducibility, and scalability.
-  - Defined clearly structured pipeline steps using ZenML, enabling easy tracking and reproducibility.
 
-## 2.2 Pipeline Components (Milestones 3 and 4)
+### ✅ **2.1 Project Structure Definition and Modulari**
 
-### Setup of Data Pipeline within the Larger ML Pipeline/MLOps Platform
+- **Where?** The project was modularized into separate components under the `pipeline/` directory:
+  - `Data_preprocessing.py` → Data loading, cleaning, chunking
+  - `index_storage.py` → Embedding generation & vector storage
+  - `query_engine.py` → Query processing and retrieval
+  - `validation.py` → Data validation
+  - `config.py` → Centralized configurations
+  - `main.py` → Pipeline execution
+- **Status:** ✅ **Done**
 
-#### Data Validation and Verification
-- Integrated validation step using ZenML and Qdrant APIs.
-- Ensured data integrity by checking the presence, dimension consistency, and payload correctness of embeddings stored in Qdrant.
-- Implemented automated checks to confirm successful data ingestion and proper storage.
+### ✅ **2.2 Code Versioning** 
 
-#### Data Preprocessing and Feature Engineering
-- Implemented a preprocessing pipeline step for:
-  - Loading documents with `SimpleDirectoryReader`.
-  - Cleaning and normalizing text using custom functions.
-  - Chunking documents using `SentenceSplitter` (chunk size: 450 words, overlap: 50 words).
-- Stored processed chunks into Qdrant with metadata, ensuring optimal retrieval.
+- **Where?** Git was used for version control.
+- **How?** Commits were structured for each milestone.
+- **Status:** ✅ **Done**
 
-#### Data Versioning
-- Managed data versioning explicitly using DVC for both raw and preprocessed datasets.
-- Tracked changes in dataset and embeddings, facilitating reproducibility of training and inference pipelines.
+### ✅ **2.3 Data Versioning** 
 
-#### Setup Machine Learning Pipeline (ZenML)
-- Defined clear ZenML pipeline steps for:
-  - Data Preprocessing
-  - Embedding generation and storage
-  - Validation of embeddings
-  - Querying and retrieving relevant data
-- Configured pipeline to be executed reliably and reproducibly through ZenML's orchestration.
+- **Where?** Implemented using **DVC (Data Version Control)**.
+- **How?**
+  - Dataset stored under `pipeline/resources/`
+  - Tracked using DVC to allow reproducible dataset versions.
+  - Issue with Git tracking (`git rm --cached pipeline/resources` resolved).
+- **Status:** ✅ **Done**
 
-## 2.3 Pipeline Components Implementation
+### ✅ **2.4 Experiment Tracking and Model Versioning** 
 
-### Pipeline Structure and Components:
+- **Where?**
+  - **ZenML** tracks pipeline execution.
+  - **MLflow** (optional) for additional logging and model versioning.
+- **Status:** ✅ **Done**
 
-- **Data_preprocessing.py:**
-  - Loads raw PDF documents.
-  - Cleans and chunks text using `SentenceSplitter` and regular expressions.
+### ✅ **2.5 Setting Up a Meta Store for Metadata**
 
-- **index_storage.py:**
-  - Embeds text chunks using `msmarco-distilbert-base-v4` and stores embeddings in Qdrant.
+- **Where?**
+  - **Qdrant** stores metadata (file names, chunk IDs, timestamps, versions).
+  - **ZenML** tracks metadata at each pipeline step.
+- **Status:** ✅ **Done**
 
-- **Validation.py:**
-  - Verifies embedding storage correctness in Qdrant by validating vector existence and consistency.
+### ✅ **2.6 Setting Up the ML Pipeline Under an MLOps Platform** 
 
-- **Query_engine.py:**
-  - Performs similarity search in Qdrant.
-  - Retrieves relevant document chunks using embeddings.
-
-- **Config.py:**
-  - Centralized management of configurations, embedding model, and Qdrant credentials.
-
-- **Main.py:**
-  - Executes all pipeline components sequentially through ZenML pipeline orchestration.
-
-## 2.4 Next Steps
-
-- Extend pipeline to support real-time deployment through FastAPI.
-- Incorporate monitoring and logging of model performance using MLflow.
-- Enhance validation and verification steps for automatic anomaly detection and reporting.
+- **Where?** Integrated with **ZenML** to orchestrate data processing, indexing, and querying.
+- **How?**
+  - `@pipeline` decorator in `pipeline.py`.
+  - Steps (`@step`) in `Data_preprocessing.py`, `index_storage.py`, `query_engine.py`, `validation.py`.
+- **Status:** ✅ **Done**
 
 ---
 
-This structured approach ensures reproducibility, scalability, and maintainability in the development and deployment of the AUIChat ML pipeline.
+## **3. Pipeline Components** 
+
+### ✅ **3.1 Setup of Data Pipeline Within the ML Pipeline / MLOps Platform**
+
+#### ✅ **3.1.1 Data Validation and Verification** 
+
+- **Where?** Implemented in `validation.py`.
+- **How?**
+  - Checks Qdrant storage integrity.
+  - Validates embedding existence & metadata consistency.
+  - Uses `validate_qdrant_storage()`.
+- **Status:** ✅ **Done**
+
+#### ✅ **3.1.2 Preprocessing and Feature Engineering** 
+
+- **Where?** Implemented in `Data_preprocessing.py`.
+- **How?**
+  - **Cleaning**: Converts text to lowercase, removes special characters.
+  - **Chunking**: Uses `SentenceSplitter` (chunk size = 450, overlap = 50).
+  - **Feature Store Integration**: Qdrant stores preprocessed embeddings.
+- **Status:** ✅ **Done**
+
+### ✅ **3.2 Integration of Model Training and Offline Evaluation into the ML Pipeline / MLOps Platform** 
+
+- **Where?** Not applicable in this milestone since **AUIChat uses retrieval-based methods instead of model training.**
+- **Future Work:** Model fine-tuning for ranking retrieved documents.
+- **Status:** ❌ **Not Required in this Milestone**
+
+### ✅ **3.3 Development of Model Behavioral Tests** 
+
+- **Where?** Implemented in `validation.py`.
+- **How?**
+  - Retrieval consistency tests.
+  - Ensures Qdrant stores valid embeddings & metadata.
+- **Status:** ✅ **Done**
+
+---
+
+## **4. Summary of Achievements**
+
+ **Fully modular pipeline setup under ZenML.** **Data ingestion, validation, and storage completed.**  **Qdrant used as a vector store + metadata store.**  **Data versioning with DVC.**  **Experiment tracking via ZenML.**  **Retrieval pipeline structured for fast response times.**
+
+##
 
