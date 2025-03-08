@@ -1,6 +1,6 @@
 # query_engine.py
 import json
-from config import qdrant_client, COLLECTION_NAME, embed_model, vector_store
+from pipeline.config import qdrant_client, COLLECTION_NAME, embed_model, vector_store
 from llama_index.core import VectorStoreIndex
 from llama_index.llms.huggingface_api import HuggingFaceInferenceAPI
 import os
@@ -62,7 +62,7 @@ def create_query_engine(query_text):
     #api_key = os.getenv("HUGGING_FACE_API_KEY")
     llm = HuggingFaceInferenceAPI(
         model_name="mistralai/Mistral-7B-Instruct-v0.3", 
-        token=#API TOKEN
+        #token="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"
     )
     from llama_index.core import Settings
     
