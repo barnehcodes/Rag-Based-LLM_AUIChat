@@ -1,0 +1,17 @@
+name: Sync Data to Qdrant
+on:
+  schedule:
+    - cron: '0 2 * * *'  # Run at 2 AM UTC daily
+
+jobs:
+  sync-data:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v2
+      
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      
+      - name: Run data sync script
+        run: python sync_qdrant.py
