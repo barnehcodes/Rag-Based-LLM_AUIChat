@@ -3,6 +3,7 @@ import json
 from config import qdrant_client, COLLECTION_NAME, embed_model, vector_store
 from llama_index.core import VectorStoreIndex
 from llama_index.llms.huggingface_api import HuggingFaceInferenceAPI
+import os
 
 def query_qdrant(query_text, limit=5):
     # Generate embedding for the query
@@ -58,9 +59,10 @@ def query_qdrant(query_text, limit=5):
 def create_query_engine(query_text):
     """Create a query engine for proper RAG queries using Hugging Face Inference API."""
     # Initialize LLM to use the Inference API; ensure your API token is set in HUGGINGFACEHUB_API_TOKEN
+    api_key = os.getenv("HUGGING_FACE_API_KEY")
     llm = HuggingFaceInferenceAPI(
         model_name="mistralai/Mistral-7B-Instruct-v0.3", 
-        token="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"
+        token=api_key
     )
     from llama_index.core import Settings
     

@@ -3,15 +3,16 @@ from llama_index.vector_stores.qdrant import QdrantVectorStore
 from llama_index.embeddings.huggingface import HuggingFaceEmbedding
 from qdrant_client import QdrantClient
 from qdrant_client.http import models
-
+import os
 # Qdrant connection details
 QDRANT_HOST = "40003a30-70d7-4886-9de5-45e25681c36e.europe-west3-0.gcp.cloud.qdrant.io"
 COLLECTION_NAME = "AUIChatVectoreCol"
 
+QR_api_key = os.getenv("QDRANT_API_KEY")
 # Connect to Qdrant
 qdrant_client = QdrantClient(
     host=QDRANT_HOST,
-    api_key="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhY2Nlc3MiOiJtIn0.uea3Q5G9lcLfqCwxzTpRKWcMh5XM0pvPB2RaeOaDPxM",
+    api_key=QR_api_key,
     https=True
 )
 
