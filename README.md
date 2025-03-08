@@ -1,6 +1,6 @@
-# ML Pipeline Development - From a Monolith to a Pipeline (Milestones 2-4)
+# ML Pipeline Development - From a Monolith to a Pipeline (Milestones 3)
 
-## 2.1 Ensuring ML Pipeline Reproducibility (Milestone 2)
+## 2.1 Ensuring ML Pipeline Reproducibility (Milestone 3)
 
 ### ✅ Ensuring Pipeline Reproducibility
 
