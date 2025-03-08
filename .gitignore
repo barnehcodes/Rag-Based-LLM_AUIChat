@@ -1,4 +1,1 @@
-# .gitignore
-.env
-config_local.py
-pipeline/.env 
+"pipeline/.env" 
