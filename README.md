@@ -57,7 +57,7 @@ This report outlines the progress made in **Milestone 3: Data Acquisition and Pr
 
 - **Where?** Integrated with **ZenML** to orchestrate data processing, indexing, and querying.
 - **How?**
-  - `@pipeline` decorator in `pipeline.py`.
+  - `@pipeline` decorator in `main.py`.
   - Steps (`@step`) in `Data_preprocessing.py`, `index_storage.py`, `query_engine.py`, `validation.py`.
 
 
