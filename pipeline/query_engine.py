@@ -1,11 +1,13 @@
-# query_engine.py
+from zenml import step
 import json
-from pipeline.config import qdrant_client, COLLECTION_NAME, embed_model, vector_store
+from config import qdrant_client, COLLECTION_NAME, embed_model, vector_store
 from llama_index.core import VectorStoreIndex
 from llama_index.llms.huggingface_api import HuggingFaceInferenceAPI
 import os
 
-def query_qdrant(query_text, limit=5):
+@step
+def query_qdrant(query_text: str, limit: int = 5):
+    """Queries Qdrant and prints the top-k relevant documents."""
     # Generate embedding for the query
     query_vector = embed_model.get_text_embedding(query_text)
     
@@ -19,11 +21,11 @@ def query_qdrant(query_text, limit=5):
     
     print(f"Found {len(search_results)} results for query: '{query_text}'")
     
+    results = []
     for i, result in enumerate(search_results):
         print(f"\nResult {i+1} - Score: {result.score}")
         print(f"Document ID: {result.id}")
         
-        # Try different payload locations for text
         text = None
         if 'text' in result.payload:
             text = result.payload.get('text')
@@ -50,27 +52,26 @@ def query_qdrant(query_text, limit=5):
         if text:
             print(f"File: {file_name}")
             print(f"Text: {text[:500]}...")
+            results.append({"score": result.score, "file": file_name, "text": text[:500]})
         else:
             print("No text found in payload")
             print(f"Available payload keys: {list(result.payload.keys())}")
         
         print("-" * 50)
+    
+    return results
 
-def create_query_engine(query_text):
-    """Create a query engine for proper RAG queries using Hugging Face Inference API."""
-    # Initialize LLM to use the Inference API; ensure your API token is set in HUGGINGFACEHUB_API_TOKEN
-    #api_key = os.getenv("HUGGING_FACE_API_KEY")
+@step
+def create_query_engine(query_text: str):
+    """Creates a query engine using the Hugging Face Inference API for RAG queries."""
     llm = HuggingFaceInferenceAPI(
         model_name="mistralai/Mistral-7B-Instruct-v0.3", 
-        #token="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"
+        token="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"
     )
     from llama_index.core import Settings
-    
-    # Initialize settings for the query
     Settings.embed_model = embed_model
     
-    # Create vector store using the same parameters as before
-    from config import qdrant_client, COLLECTION_NAME  # re-import if needed
+    from config import qdrant_client, COLLECTION_NAME
     from llama_index.vector_stores.qdrant import QdrantVectorStore
     temp_vector_store = QdrantVectorStore(
         client=qdrant_client,
@@ -88,7 +89,6 @@ def create_query_engine(query_text):
     # Create a query engine using the inference API LLM
     query_engine = index.as_query_engine(llm=llm)
     
-    # Execute query
     response = query_engine.query(query_text)
     
     print(f"\nRAG Response for query: '{query_text}'")

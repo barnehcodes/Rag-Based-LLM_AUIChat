@@ -1,7 +1,7 @@
 from zenml import step
 import pickle
 from llama_index.core import VectorStoreIndex, StorageContext
-from pipeline.config import vector_store, embed_model
+from config import vector_store, embed_model
 
 @step
 def create_and_store_index(nodes_file: str):

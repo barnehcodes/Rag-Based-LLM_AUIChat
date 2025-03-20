@@ -12,7 +12,7 @@ COLLECTION_NAME = "AUIChatVectoreCol"
 # Connect to Qdrant
 qdrant_client = QdrantClient(
     host=QDRANT_HOST,
-    #api_key="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhY2Nlc3MiOiJtIn0.uea3Q5G9lcLfqCwxzTpRKWcMh5XM0pvPB2RaeOaDPxM",
+    api_key="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhY2Nlc3MiOiJtIn0.uea3Q5G9lcLfqCwxzTpRKWcMh5XM0pvPB2RaeOaDPxM",
     https=True
 )
 
