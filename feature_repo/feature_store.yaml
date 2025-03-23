@@ -1,0 +1,5 @@
+project: my_feature_repo  
+registry: data/registry.db  
+provider: local  
+offline_store: { type: file }  # uses local files for offline store  
+online_store: { type: sqlite, path: data/online_store.db }  
