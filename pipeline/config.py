@@ -46,3 +46,4 @@ vector_store = QdrantVectorStore(
     embed_dim=768,  # Must match embedding dimension
     stores_text=True,  # Store full document content in Qdrant
 )
+
