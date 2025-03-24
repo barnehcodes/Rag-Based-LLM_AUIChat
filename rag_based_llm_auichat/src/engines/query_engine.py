@@ -4,6 +4,8 @@ from workflows.config import qdrant_client, COLLECTION_NAME, embed_model, vector
 from llama_index.core import VectorStoreIndex
 from llama_index.llms.huggingface_api import HuggingFaceInferenceAPI
 import os
+import mlflow
+import mlflow.sklearn  # or whichever flavor you're tracking
 
 @step
 def query_qdrant(query_text: str, limit: int = 5):
@@ -89,11 +91,16 @@ def create_query_engine(query_text: str):
     # Create a query engine using the inference API LLM
     query_engine = index.as_query_engine(llm=llm)
     
+     # Run the query and track the result
     response = query_engine.query(query_text)
-    
-    print(f"\nRAG Response for query: '{query_text}'")
-    print("-" * 50)
     print(response)
-    print("-" * 50)
-    
+
+        # Log metrics or output length
+    mlflow.log_metric("response_length", len(str(response)))
+        
+        # Save query + response
+    with open("query_response.txt", "w") as f:
+         f.write(f"Query: {query_text}\n\nResponse:\n{response}")
+    mlflow.log_artifact("query_response.txt")
+
     return response

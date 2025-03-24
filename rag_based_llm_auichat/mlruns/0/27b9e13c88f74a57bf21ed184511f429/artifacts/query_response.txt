@@ -1,0 +1,4 @@
+Query: hello
+
+Response:
+Hello! If you have any questions or inquiries regarding Al Akhawayn University, feel free to explore the resources on our website or contact us using the provided contact information. We're here to help you take the next step towards an exceptional educational journey.

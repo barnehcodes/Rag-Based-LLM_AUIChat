@@ -1,0 +1,15 @@
+artifact_uri: file:///home/barneh/Rag-Based-LLM_AUIChat/rag_based_llm_auichat/mlruns/0/27b9e13c88f74a57bf21ed184511f429/artifacts
+end_time: null
+entry_point_name: ''
+experiment_id: '0'
+lifecycle_stage: active
+run_id: 27b9e13c88f74a57bf21ed184511f429
+run_name: rebellious-calf-158
+run_uuid: 27b9e13c88f74a57bf21ed184511f429
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1742766587578
+status: 1
+tags: []
+user_id: barneh

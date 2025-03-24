@@ -1,115 +1,150 @@
 # **ML Pipeline Development - Milestone 3 Report**
 
-check notebooks for clear outputs for:
- * ingestion of raw data and storage into a repository
- * Data preprocessing and feature engineering
- * Data validation/verification 
+Check notebooks for clear outputs for:
+
+- Ingestion of raw data and storage into a repository
+- Data preprocessing and feature engineering
+- Data validation/verification
 
 ## **1. Introduction**
 
 This report outlines the progress made in **Milestone 3: Data Acquisition and Preparation** as part of the larger **ML Pipeline Development** for AUIChat, a RAG-based chatbot. This milestone involved structuring the data pipeline, implementing data validation, preprocessing, embedding generation, and storage. Additionally, the pipeline was integrated into ZenML to enhance reproducibility and scalability.
 
-## **2. Ensuring ML Pipeline Reproducibilit** 
+## **2. Ensuring ML Pipeline Reproducibility**
 
+### ✅ **2.1 Project Structure Definition and Modularity**
 
+- **Where?** The project follows a modular layout using the Cookiecutter data science template:
 
-### ✅ **2.1 Project Structure Definition and Modulari**
+```bash
+rag_based_llm_auichat/
+├── data/            # Raw, processed, external, interim datasets
+├── demo/            # UI and assets for demonstrations
+├── docs/            # Documentation and references
+├── models/          # Saved or trained models
+├── notebooks/       # Experiments and EDA notebooks
+├── references/      # Static files like PDFs
+├── reports/         # Generated figures and plots
+└── src/             # Actual pipeline source code
+    ├── data/            # Preprocessing and storage
+    ├── features/        # Feature store & engineering
+    ├── models/          # Model interfaces (LLM)
+    ├── valisation/      # Validation logic
+    └── workflows/       # Main pipeline and orchestration
+```
 
-- **Where?** The project was modularized into separate components under the `pipeline/` directory:
-  - `Data_preprocessing.py` → Data loading, cleaning, chunking
-  - `index_storage.py` → Embedding generation & vector storage
-  - `query_engine.py` → Query processing and retrieval
-  - `validation.py` → Data validation
-  - `config.py` → Centralized configurations
-  - `main.py` → Pipeline execution
+### ✅ **2.2 Code Versioning**
 
-
-### ✅ **2.2 Code Versioning** 
-
-- **Where?** Git was used for version control.
-- **How?** Commits were structured for each milestone.
-
-
-### ✅ **2.3 Data Versioning** 
-
-- **Where?** Implemented using **DVC (Data Version Control)**.
+- **Where?** GitHub and Git used for managing all version control.
 - **How?**
-  - Dataset stored under `pipeline/resources/`
-  - Tracked using DVC to allow reproducible dataset versions.
-  - Issue with Git tracking (`git rm --cached pipeline/resources` resolved).
+  - Feature branches like `query-ui` created for UI integration
+  - `.gitignore` handles large files (e.g. `venv/`, `.DS_Store`, `.ipynb_checkpoints/`)
 
+### ✅ **2.3 Data Versioning**
 
-### ✅ **2.4 Experiment Tracking and Model Versioning** 
+- **Where?** Using **DVC** to version raw and processed data.
+- **How?**
+  - Raw PDFs stored under `data/raw/`
+  - Tracked with `.dvc` files, ensuring reproducibility
 
-- **Where?**
-  - **ZenML** tracks pipeline execution.
-  - **MLflow** (optional) for additional logging and model versioning.
+### ✅ **2.4 Experiment Tracking and Model Versioning**
 
+- **Where?** Integrated into ZenML and **MLflow**
+- **How?**
+  - Every experiment step (e.g., embedding choice, chunk size, LLM config) is logged to MLflow.
+  - Tracked using `mlflow.start_run()` within ZenML `@step` decorators.
+  - Metrics: Semantic similarity, response length, etc.
 
 ### ✅ **2.5 Setting Up a Meta Store for Metadata**
 
 - **Where?**
-  - **Qdrant** stores metadata (file names, chunk IDs, timestamps, versions).
-  - **ZenML** tracks metadata at each pipeline step.
+  - Qdrant stores vectorized chunks + metadata.
+  - ZenML tracks pipeline metadata (artifacts, runs, steps).
 
+### ✅ **2.6 Setting Up the ML Pipeline Under an MLOps Platform**
 
-### ✅ **2.6 Setting Up the ML Pipeline Under an MLOps Platform** 
-
-- **Where?** Integrated with **ZenML** to orchestrate data processing, indexing, and querying.
+- **Where?** ZenML orchestrates the full pipeline.
 - **How?**
-  - `@pipeline` decorator in `main.py`.
-  - Steps (`@step`) in `Data_preprocessing.py`, `index_storage.py`, `query_engine.py`, `validation.py`.
-
+  - Steps defined using `@step` in ZenML.
+  - End-to-end workflow in `pipeline/main.py`.
+  - Pipeline runs visualized in ZenML dashboard.
 
 ---
 
-## **3. Pipeline Components** 
+## **3. Pipeline Components**
+![Pipeline Diagram](rag_based_llm_auichat/reports/figures/Pipeline_Structure_and_Components.png)
 
-![Pipeline Diagram](assests/Pipeline_Structure_and_Components.png)
 
 ### ✅ **3.1 Setup of Data Pipeline Within the ML Pipeline / MLOps Platform**
 
-#### ✅ **3.1.1 Data Validation and Verification** 
+#### ✅ **3.1.1 Data Validation and Verification**
 
-- **Where?** Implemented in `validation.py`.
+- **Where?** Implemented in `valisation/validation.py`
 - **How?**
-  - Checks Qdrant storage integrity.
-  - Validates embedding existence & metadata consistency.
-  - Uses `validate_qdrant_storage()`.
+  - Uses Qdrant's `scroll()` to confirm embeddings and payloads
+  - Checks for missing vectors or metadata issues
 
+#### ✅ **3.1.2 Preprocessing and Feature Engineering**
 
-#### ✅ **3.1.2 Preprocessing and Feature Engineering** 
-
-- **Where?** Implemented in `Data_preprocessing.py`.
+- **Where?** `data/Data_preprocessing.py`
 - **How?**
-  - **Cleaning**: Converts text to lowercase, removes special characters.
-  - **Chunking**: Uses `SentenceSplitter` (chunk size = 450, overlap = 50).
-  - **Feature Store Integration**: Qdrant stores preprocessed embeddings.
--
+  - Cleaning, chunking, metadata tagging
+  - Embedding generation using `HuggingFaceEmbedding`
+  - Saved locally and/or pushed to Qdrant
 
-### ❌ **3.2 Integration of Model Training and Offline Evaluation into the ML Pipeline / MLOps Platform** 
+### ❌ **3.2 Integration of Model Training and Offline Evaluation into the ML Pipeline / MLOps Platform**
 
-- **Where?** Not applicable in this milestone since **AUIChat uses retrieval-based methods instead of model training.**
-- **Future Work:** Model fine-tuning for ranking retrieved documents.
+- **Where?** No model training (retrieval-focused pipeline)
+- **Future Work:** Ranking models / Fine-tuning / Hybrid RAG
 
+### ✅ **3.3 Development of Model Behavioral Tests**
 
-### ✅ **3.3 Development of Model Behavioral Tests** 
-
-- **Where?** Implemented in `validation.py`.
+- **Where?** `valisation/validation.py`
 - **How?**
-  - Retrieval consistency tests.
-  - Ensures Qdrant stores valid embeddings & metadata.
-
+  - Validation step ensures retrieval outputs valid results
+  - Also used to test new sources before indexing
 
 ---
 
-## **4. Summary of Achievements**
+## **4. Experimentation and Evaluation (Milestone 4)**
+![MLflow ui](rag_based_llm_auichat/reports/figures/MLflow.png)
 
- **Fully modular pipeline setup under ZenML.** **Data ingestion, validation, and storage completed.**  **Qdrant used as a vector store + metadata store.**  **Data versioning with DVC.**  **Experiment tracking via ZenML.**  **Retrieval pipeline structured for fast response times.**
+### ✅ **4.1 Embedding Model and Chunking Strategy Evaluation**
+
+- **Where?** `notebooks/experiments.ipynb`
+- **How?**
+  - Runs combinations of embedding models (e.g., `all-MiniLM`, `msmarco-distilbert`)
+  - Tests different chunk sizes and overlap values
+  - Evaluation via `evaluate_response()` step
+
+### ✅ **4.2 Evaluation Step with ZenML & MLflow**
+
+- **Step:** `evaluate_response(query, llm_response, ground_truth)`
+- **Logs to MLflow:**
+  - `semantic_similarity`
+  - Query text
+  - Ground truth presence
+- **Why:** Allows experiment tracking over time
+
+### ✅ **4.3 Interactive UI (RAG Gradio Frontend)**
+![ZenML runing the pipeine ](rag_based_llm_auichat/reports/figures/ui.png)
+
+- **Where?** `demo/gradio_app.py`
+- **How?**
+  - Uses Gradio to launch a chatbot interface for testing live queries
+  - Integrated as a step inside the ZenML pipeline (via `launch_gradio_app()`)
+
+---
+
+## **5. Summary of Achievements**
+
+**📌 Modular ZenML pipeline**  |  **📌 Experiment tracking with MLflow**  |  **📌 RAG architecture powered by Qdrant**\
+**📌 Feature store integrated (feast)** | **📌 Gradio chatbot UI** | **📌 Chunking, embedding, and LLM evaluation experiments**
+
 
 ##
-![ZenML runing the pipeine ](assests/output.png)
-![Cont](assests/output_cont.png)
+![ZenML runing the pipeine ](rag_based_llm_auichat/reports/figures/output.png)
+![Cont](rag_based_llm_auichat/reports/figures/output_cont.png)
 
 
 ### 📚 References & Additional Resources
