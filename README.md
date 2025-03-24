@@ -92,10 +92,16 @@ rag_based_llm_auichat/
   - Embedding generation using `HuggingFaceEmbedding`
   - Saved locally and/or pushed to Qdrant
 
-### ❌ **3.2 Integration of Model Training and Offline Evaluation into the ML Pipeline / MLOps Platform**
+#### ✅ 3.2 Integration of Offline Evaluation into the ML Pipeline / MLOps Platform
 
-- **Where?** No model training (retrieval-focused pipeline)
-- **Future Work:** Ranking models / Fine-tuning / Hybrid RAG
+  - **Where?**  `src/engines/evaluation.py and integrated in pipeline/main.py`
+
+- **How?**
+    - Added evaluate_response() as a ZenML step
+
+    - Automatically evaluates LLM output after query execution
+
+    - Logs evaluation metrics to MLflow (e.g., response length, semantic score)
 
 ### ✅ **3.3 Development of Model Behavioral Tests**
 
@@ -108,6 +114,7 @@ rag_based_llm_auichat/
 
 ## **4. Experimentation and Evaluation (Milestone 4)**
 ![MLflow ui](rag_based_llm_auichat/reports/figures/MLflow.png)
+![MLflow ui](rag_based_llm_auichat/reports/figures/result.png)
 
 ### ✅ **4.1 Embedding Model and Chunking Strategy Evaluation**
 
