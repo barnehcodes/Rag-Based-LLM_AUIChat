@@ -148,6 +148,16 @@ rag_based_llm_auichat/
 **📌 Modular ZenML pipeline**  |  **📌 Experiment tracking with MLflow**  |  **📌 RAG architecture powered by Qdrant**\
 **📌 Feature store integrated (feast)** | **📌 Gradio chatbot UI** | **📌 Chunking, embedding, and LLM evaluation experiments**
 
+### 📊 Project Mind Map Visualization
+
+We've created a comprehensive mind map of the project architecture and components. To explore the interactive visualization:
+
+1. Open the `mindMap.html` file in your browser
+2. Use the interactive controls to expand/collapse branches
+3. Explore the detailed breakdown of all system components
+
+The mind map provides a visual overview of our RAG-based system including the pipeline architecture, MLflow integration, ZenML orchestration, user interfaces, API layer, evaluation framework, and project structure.
+
 
 ##
 ![ZenML runing the pipeine ](rag_based_llm_auichat/reports/figures/output.png)
@@ -174,5 +184,5 @@ Below is a curated list of resources that were instrumental in shaping this mile
 - **YouTube Guides on RAG & Vector Databases:**  
   - [**Understanding RAG and Its Applications**](https://youtu.be/mHrwS6ZoNKc?si=Lctcvy_D7V_CbxdD)  
   - [**How Vector Databases Work**](https://youtu.be/3UsluX0jryM?si=gMdeeQhyJCh3mkGx)  
-  - [**Implementing RAG with LlamaIndex**](https://youtu.be/JEBDfGqrAUA?si=GtnHyxE6AuJH0g0b)  
+  - [**Implementing RAG with LlamaIndex**](https://youtu.be/JEBDfGqrAUA?si=GtnHyxE6AuJH0g0b)
 
