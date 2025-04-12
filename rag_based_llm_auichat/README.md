@@ -1,6 +1,3 @@
-Here's a clean and professional `README.md` for your `rag_based_llm_auichat` project that explains the structure and how to run it:
-
----
 
 ```markdown
 # 💬 RAG-Based LLM AUIChat
@@ -128,11 +125,4 @@ zenml up
 
 ---
 
-## 📌 License
 
-MIT License – see `LICENSE` file for details.
-```
-
----
-
-Would you like me to generate this `README.md` file directly into your repo folder or edit it in place?

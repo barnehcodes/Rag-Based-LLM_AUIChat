@@ -1,0 +1,15 @@
+artifact_uri: file:///home/barneh/Rag-Based-LLM_AUIChat/rag_based_llm_auichat/notebooks/mlruns/180508001129329925/d1b4d9edac274741a8ff8ade85d43eaa/artifacts
+end_time: 1744470394851
+entry_point_name: ''
+experiment_id: '180508001129329925'
+lifecycle_stage: active
+run_id: d1b4d9edac274741a8ff8ade85d43eaa
+run_name: miniLM_250
+run_uuid: d1b4d9edac274741a8ff8ade85d43eaa
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1744470315622
+status: 3
+tags: []
+user_id: barneh

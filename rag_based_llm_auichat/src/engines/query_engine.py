@@ -1,6 +1,6 @@
 from zenml import step
 import json
-from workflows.config import qdrant_client, COLLECTION_NAME, embed_model, vector_store
+from src.workflows.config import qdrant_client, COLLECTION_NAME, embed_model, vector_store
 from llama_index.core import VectorStoreIndex
 from llama_index.llms.huggingface_api import HuggingFaceInferenceAPI
 import os
@@ -66,41 +66,69 @@ def query_qdrant(query_text: str, limit: int = 5):
 @step
 def create_query_engine(query_text: str):
     """Creates a query engine using the Hugging Face Inference API for RAG queries."""
-    llm = HuggingFaceInferenceAPI(
-        model_name="mistralai/Mistral-7B-Instruct-v0.3", 
-        token="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"
-    )
-    from llama_index.core import Settings
-    Settings.embed_model = embed_model
-    
-    from workflows.config import qdrant_client, COLLECTION_NAME
-    from llama_index.vector_stores.qdrant import QdrantVectorStore
-    temp_vector_store = QdrantVectorStore(
-        client=qdrant_client,
-        collection_name=COLLECTION_NAME,
-        text_key="text",
-        metadata_key="metadata",
-        content_key="content",
-        embed_dim=768,
-        stores_text=True
-    )
-    
-    # Create an empty index with the vector store
-    index = VectorStoreIndex.from_vector_store(temp_vector_store)
-    
-    # Create a query engine using the inference API LLM
-    query_engine = index.as_query_engine(llm=llm)
-    
-     # Run the query and track the result
-    response = query_engine.query(query_text)
-    print(response)
-
-        # Log metrics or output length
-    mlflow.log_metric("response_length", len(str(response)))
+    try:
+        # Initialize the LLM model
+        llm = HuggingFaceInferenceAPI(
+            model_name="mistralai/Mistral-7B-Instruct-v0.3", 
+            token="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"
+        )
         
-        # Save query + response
-    with open("query_response.txt", "w") as f:
-         f.write(f"Query: {query_text}\n\nResponse:\n{response}")
-    mlflow.log_artifact("query_response.txt")
-
-    return response
+        # Configure llama-index Settings
+        from llama_index.core import Settings
+        Settings.embed_model = embed_model
+        
+        # Setup vector store
+        from src.workflows.config import qdrant_client, COLLECTION_NAME
+        from llama_index.vector_stores.qdrant import QdrantVectorStore
+        temp_vector_store = QdrantVectorStore(
+            client=qdrant_client,
+            collection_name=COLLECTION_NAME,
+            text_key="text",
+            metadata_key="metadata",
+            content_key="content",
+            embed_dim=768,
+            stores_text=True
+        )
+        
+        # Create an index with the vector store
+        index = VectorStoreIndex.from_vector_store(temp_vector_store)
+        
+        # Create a query engine using the inference API LLM
+        query_engine = index.as_query_engine(
+            llm=llm,
+            similarity_top_k=3,  # Retrieve top 3 most similar chunks
+            streaming=False
+        )
+        
+        # Run the query
+        print(f"📝 Processing query: {query_text}")
+        response = query_engine.query(query_text)
+        
+        # Log metrics for ZenML/MLflow tracking
+        try:
+            source_nodes = getattr(response, 'source_nodes', [])
+            retrieved_chunks = len(source_nodes) if source_nodes else 0
+            
+            mlflow.log_metric("response_length", len(str(response)))
+            mlflow.log_metric("retrieved_chunks", retrieved_chunks)
+            
+            # Save query + response for review
+            with open("query_response.txt", "w") as f:
+                f.write(f"Query: {query_text}\n\nResponse:\n{response}")
+                
+                if source_nodes:
+                    f.write("\n\nSources:\n")
+                    for i, node in enumerate(source_nodes):
+                        f.write(f"\nSource {i+1}:\n{node.get_text()[:500]}...\n")
+                        
+            mlflow.log_artifact("query_response.txt")
+        except Exception as log_err:
+            print(f"Warning: Could not log metrics: {str(log_err)}")
+        
+        print(f"✅ Response generated successfully")
+        return response
+        
+    except Exception as e:
+        print(f"❌ Error in query engine: {str(e)}")
+        # Return a helpful error message that can be displayed to the user
+        return f"I encountered an error while processing your query. Please try again or contact support.\nError: {str(e)}"
