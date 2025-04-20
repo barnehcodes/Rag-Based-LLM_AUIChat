@@ -1,0 +1,15 @@
+artifact_uri: file:///home/barneh/Rag-Based-LLM_AUIChat/rag_based_llm_auichat/notebooks/mlruns/180508001129329925/190b2e54b85e4c75a783e16b21c5642f/artifacts
+end_time: 1745174950466
+entry_point_name: ''
+experiment_id: '180508001129329925'
+lifecycle_stage: active
+run_id: 190b2e54b85e4c75a783e16b21c5642f
+run_name: msmarco_400
+run_uuid: 190b2e54b85e4c75a783e16b21c5642f
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1745174520771
+status: 3
+tags: []
+user_id: barneh

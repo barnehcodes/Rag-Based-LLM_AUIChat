@@ -143,7 +143,7 @@ rag_based_llm_auichat/
 
 ---
 
-## **5. Summary of Achievements**
+## ****
 
 **📌 Modular ZenML pipeline**  |  **📌 Experiment tracking with MLflow**  |  **📌 RAG architecture powered by Qdrant**\
 **📌 Feature store integrated (feast)** | **📌 Gradio chatbot UI** | **📌 Chunking, embedding, and LLM evaluation experiments**
