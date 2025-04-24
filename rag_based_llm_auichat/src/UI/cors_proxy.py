@@ -5,7 +5,7 @@ import requests
 app = Flask(__name__)
 
 # Target API
-TARGET_API = 'http://localhost:5000'
+TARGET_API = 'http://localhost:8000'
 
 @app.route('/<path:path>', methods=['GET', 'POST', 'OPTIONS'])
 def proxy(path):
@@ -54,6 +54,6 @@ def proxy(path):
 if __name__ == '__main__':
     # Run on port 5001
     print("🚀 Starting CORS Proxy on port 5001...")
-    print("Forwarding requests to http://localhost:5000")
+    print(f"Forwarding requests to {TARGET_API}") # Corrected print statement
     print("Access your API via http://localhost:5001/api/chat")
     app.run(host='0.0.0.0', port=5001, debug=True)

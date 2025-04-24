@@ -1,0 +1,15 @@
+artifact_uri: file:///home/barneh/Rag-Based-LLM_AUIChat/rag_based_llm_auichat/notebooks/mlruns/853101457179149251/895240a58396480eaeec7b018a65221c/artifacts
+end_time: 1745272958579
+entry_point_name: ''
+experiment_id: '853101457179149251'
+lifecycle_stage: active
+run_id: 895240a58396480eaeec7b018a65221c
+run_name: smollm_135m_structured
+run_uuid: 895240a58396480eaeec7b018a65221c
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1745272958550
+status: 3
+tags: []
+user_id: barneh

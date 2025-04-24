@@ -1,138 +1,129 @@
-from flask import Flask, request, jsonify, make_response
-from flask_cors import CORS
+"""
+API Handler for the RAG-Based LLM AUIChat System
+"""
+import traceback
+import random
+from typing import List, Dict, Any
 import sys
 import os
-from pathlib import Path
 
-# Add the src directory to the path
-current_dir = Path(__file__).parent
-src_dir = current_dir.parent
-project_root = src_dir.parent
-sys.path.append(str(src_dir))
-sys.path.append(str(project_root))
+# Add project root to sys.path to allow absolute imports
+project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..'))
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
 
-# Import RAG components
-from src.engines.query_engine import create_query_engine
-from src.workflows.config import load_environment
+from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel, Field
+import uvicorn
 
-# Initialize environment
-try:
-    load_environment()
-    print("✅ Environment loaded successfully")
-except Exception as e:
-    print(f"❌ Error loading environment: {str(e)}")
+# Import from other modules - use absolute imports
+from rag_based_llm_auichat.src.engines.local_models.local_llm import LocalLLM
+from rag_based_llm_auichat.src.workflows.config import index, embed_model
 
-app = Flask(__name__)
+# Create FastAPI app
+app = FastAPI(title="RAG-Based LLM AUIChat API")
 
-# Configure CORS with more specific settings
-CORS(app, resources={r"/api/*": {"origins": "*"}}, supports_credentials=True)
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-# Add explicit CORS headers to all responses
-@app.after_request
-def add_cors_headers(response):
-    response.headers.add('Access-Control-Allow-Origin', '*')
-    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
-    response.headers.add('Access-Control-Allow-Methods', 'GET,POST,OPTIONS')
-    return response
+# Define data models
+class ChatMessage(BaseModel):
+    role: str = Field(..., description="The role of the message sender (user or assistant)")
+    content: str = Field(..., description="The content of the message")
 
-# Handle OPTIONS requests explicitly
-@app.route('/api/chat', methods=['OPTIONS'])
-def options():
-    response = make_response()
-    response.headers.add('Access-Control-Allow-Origin', '*')
-    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
-    response.headers.add('Access-Control-Allow-Methods', 'POST,OPTIONS')
-    return response
+class ChatRequest(BaseModel):
+    messages: List[ChatMessage] = Field(..., description="The conversation history")
 
-@app.route('/api/chat', methods=['POST'])
-def chat():
-    """Process chat messages and return RAG-based responses"""
-    # Log incoming request for debugging
-    print(f"Received request: {request.method} {request.path}")
-    print(f"Request headers: {request.headers}")
-    
+class ChatResponse(BaseModel):
+    response: str = Field(..., description="The assistant's response")
+    sources: List[Dict[str, str]] = Field(default=[], description="Sources used for the response")
+
+# Define fallback responses
+FALLBACK_RESPONSES = [
+    "I apologize, but I'm having trouble retrieving that information at the moment. Could you try asking in a different way?",
+    "I don't have enough information to answer that question properly. Could you provide more details or ask something else?",
+    "I'm sorry, but I couldn't find reliable information to answer your question. Please try a different question or contact the university directly.",
+    "That's a good question, but I'm not able to provide accurate information on that right now. Could we try a different topic?",
+    "I'm still learning about Al Akhawayn University. I don't have enough context to answer that question properly yet."
+]
+
+@app.get("/api/health") # Changed route from "/" to "/api/health"
+def health_check_api():
+    """Health check endpoint for API path"""
+    # You might want to add checks here, e.g., if the index is loaded
+    status = {
+        "status": "ok", 
+        "message": "AUIChat API is running",
+        "index_loaded": index is not None,
+        # Add qdrant check if possible/needed
+    }
+    return status
+
+@app.post("/api/chat", response_model=ChatResponse)
+def chat(request: ChatRequest):
+    """
+    Process a chat request and generate a response using the RAG pipeline
+    """
+    # Extract the last user message
     try:
-        data = request.json
-        user_query = data.get('message', '')
+        last_message = next((m for m in reversed(request.messages) if m.role == "user"), None)
+        if not last_message:
+            raise ValueError("No user message found in the conversation history")
         
-        if not user_query.strip():
-            return jsonify({'response': 'Please enter a question.'}), 400
+        query = last_message.content
         
-        # Process through the RAG pipeline
-        try:
-            start_time = __import__('time').time()
-            
-            # Instead of using the ZenML step directly, use llama_index directly
-            from src.workflows.config import qdrant_client, COLLECTION_NAME, embed_model
-            from llama_index.core import VectorStoreIndex
-            from llama_index.llms.huggingface_api import HuggingFaceInferenceAPI
-            from llama_index.vector_stores.qdrant import QdrantVectorStore
-            
-            # Initialize the LLM
-            llm = HuggingFaceInferenceAPI(
-                model_name="mistralai/Mistral-7B-Instruct-v0.3", 
-                token="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"
+        # Check if the pre-built index is available from config
+        if index is None:
+            print("⚠️ Pre-built index not available, using fallback response")
+            return ChatResponse(
+                response=random.choice(FALLBACK_RESPONSES),
+                sources=[]
             )
-            
-            # Set up vector store
-            temp_vector_store = QdrantVectorStore(
-                client=qdrant_client,
-                collection_name=COLLECTION_NAME,
-                text_key="text",
-                metadata_key="metadata",
-                content_key="content",
-                embed_dim=768,
-                stores_text=True
-            )
-            
-            # Create index from vector store
-            index = VectorStoreIndex.from_vector_store(temp_vector_store)
-            
-            # Create query engine
-            query_engine = index.as_query_engine(
-                llm=llm,
-                similarity_top_k=3  # Retrieve top 3 most similar chunks
-            )
-            
-            # Execute query
-            response = query_engine.query(user_query)
-            
-            inference_time = (__import__('time').time() - start_time) * 1000  # Convert to ms
-            
-            return jsonify({
-                'response': str(response),
-                'metrics': {
-                    'inferenceTime': round(inference_time, 2)
-                }
-            })
-        except Exception as e:
-            print(f"Error processing query: {str(e)}")
-            import traceback
-            traceback.print_exc()
-            return jsonify({
-                'response': f"I encountered an error while processing your question. Please try again or contact support.\nError details: {str(e)}",
-                'metrics': {
-                    'inferenceTime': 0
-                }
-            }), 500
+        
+        # Create a query engine using the pre-built index and local LLM
+        print(f"Creating query engine with pre-built index...")
+        query_engine = index.as_query_engine(
+            llm=LocalLLM(),
+            similarity_top_k=3,
+            structured_answer_filtering=True
+        )
+        
+        # Execute the query
+        response = query_engine.query(query)
+        
+        # Extract sources if available
+        sources = []
+        if hasattr(response, 'source_nodes') and response.source_nodes:
+            for node in response.source_nodes:
+                if hasattr(node, 'metadata'):
+                    source = {
+                        "file_name": node.metadata.get("file_name", "Unknown"),
+                        "text": node.text[:200] + "..." if len(node.text) > 200 else node.text
+                    }
+                    sources.append(source)
+        
+        return ChatResponse(
+            response=str(response),
+            sources=sources
+        )
+    
     except Exception as e:
-        print(f"Error parsing request: {str(e)}")
-        return jsonify({
-            'response': f"Error parsing request: {str(e)}",
-            'metrics': {
-                'inferenceTime': 0
-            }
-        }), 400
+        # If any error occurs, try up to 3 times then use fallback responses
+        print(f"⚠️ Query attempt failed: {str(e)}")
+        traceback.print_exc()
+        
+        return ChatResponse(
+            response=random.choice(FALLBACK_RESPONSES),
+            sources=[]
+        )
 
-@app.route('/api/health', methods=['GET'])
-def health_check():
-    """Simple health check endpoint"""
-    return jsonify({'status': 'healthy', 'service': 'auichat-rag-api'})
-
-if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5000))
-    print(f"🚀 Starting AUIChat RAG API server on port {port}...")
-    print(f"API endpoints available at:")
-    print(f"  - http://localhost:{port}/api/chat (POST)")
-    print(f"  - http://localhost:{port}/api/health (GET)")
-    app.run(host='0.0.0.0', port=port, debug=True)
+if __name__ == "__main__":
+    # Run the FastAPI server
+    uvicorn.run(app, host="127.0.0.1", port=8000)

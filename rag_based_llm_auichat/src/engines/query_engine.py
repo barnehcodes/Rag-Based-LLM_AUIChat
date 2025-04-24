@@ -1,11 +1,13 @@
 from zenml import step
 import json
-from src.workflows.config import qdrant_client, COLLECTION_NAME, embed_model, vector_store
+from src.workflows.config import qdrant_client, COLLECTION_NAME, embed_model, vector_store, EMBED_DIM
 from llama_index.core import VectorStoreIndex
-from llama_index.llms.huggingface_api import HuggingFaceInferenceAPI
 import os
 import mlflow
 import mlflow.sklearn  # or whichever flavor you're tracking
+
+# Import the local model handler instead of the HuggingFace API
+from src.engines.local_models.local_llm import LocalLLM
 
 @step
 def query_qdrant(query_text: str, limit: int = 5):
@@ -65,35 +67,24 @@ def query_qdrant(query_text: str, limit: int = 5):
 
 @step
 def create_query_engine(query_text: str):
-    """Creates a query engine using the Hugging Face Inference API for RAG queries."""
+    """Creates a query engine using the local SmolLM-360M model for RAG queries."""
     try:
-        # Initialize the LLM model
-        llm = HuggingFaceInferenceAPI(
-            model_name="mistralai/Mistral-7B-Instruct-v0.3", 
-            token="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"
-        )
+        # Initialize the local LLM model instead of using the Hugging Face Inference API
+        llm = LocalLLM()
         
         # Configure llama-index Settings
         from llama_index.core import Settings
         Settings.embed_model = embed_model
         
-        # Setup vector store
-        from src.workflows.config import qdrant_client, COLLECTION_NAME
-        from llama_index.vector_stores.qdrant import QdrantVectorStore
-        temp_vector_store = QdrantVectorStore(
-            client=qdrant_client,
-            collection_name=COLLECTION_NAME,
-            text_key="text",
-            metadata_key="metadata",
-            content_key="content",
-            embed_dim=768,
-            stores_text=True
-        )
+        # Ensure vector_store is available from config
+        if not vector_store:
+            raise ConnectionError("Failed to connect to Qdrant vector store. Check config.py and Qdrant instance.")
+
+        # Create an index with the vector store (already configured in config.py)
+        # No need to create a temporary vector store here
+        index = VectorStoreIndex.from_vector_store(vector_store)
         
-        # Create an index with the vector store
-        index = VectorStoreIndex.from_vector_store(temp_vector_store)
-        
-        # Create a query engine using the inference API LLM
+        # Create a query engine using the local LLM
         query_engine = index.as_query_engine(
             llm=llm,
             similarity_top_k=3,  # Retrieve top 3 most similar chunks
