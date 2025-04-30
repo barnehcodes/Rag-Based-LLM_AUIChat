@@ -1,0 +1,14 @@
+base_model: HuggingFaceTB/SmolLM-360M
+datasets:
+- Magpie-Align/Magpie-Pro-300K-Filtered
+- bigcode/self-oss-instruct-sc2-exec-filter-50k
+- teknium/OpenHermes-2.5
+- HuggingFaceTB/everyday-conversations-llama3.1-2k
+language:
+- en
+library_name: transformers
+license: apache-2.0
+tags:
+- alignment-handbook
+- trl
+- sft

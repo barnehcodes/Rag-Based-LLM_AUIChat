@@ -57,8 +57,15 @@ EMBED_DIM = 384  # BGE-small dimension
 # OUTPUT_DIR = os.path.join(script_dir, "storage") # No longer needed for local storage
 
 # Qdrant Cloud Connection Details (Update with your actual credentials if different)
-QDRANT_HOST = "40003a30-70d7-4886-9de5-45e25681c36e.europe-west3-0.gcp.cloud.qdrant.io" # From config.py
-QDRANT_API_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhY2Nlc3MiOiJtIn0.uea3Q5G9lcLfqCwxzTpRKWcMh5XM0pvPB2RaeOaDPxM" # From config.py - Consider using environment variables
+# It's highly recommended to load sensitive keys from environment variables
+# QDRANT_HOST = os.getenv("QDRANT_HOST", "YOUR_QDRANT_HOST")
+# QDRANT_API_KEY = os.getenv("QDRANT_API_KEY", "YOUR_QDRANT_API_KEY")
+# Using hardcoded values for now, based on config.py
+QDRANT_HOST = "40003a30-70d7-4886-9de5-45e25681c36e.europe-west3-0.gcp.cloud.qdrant.io"
+QDRANT_API_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhY2Nlc3MiOiJtIn0.uea3Q5G9lcLfqCwxzTpRKWcMh5XM0pvPB2RaeOaDPxM"
+
+# Embedding Model
+EMBED_MODEL_NAME = "BAAI/bge-small-en-v1.5"
 
 def process_documents(pdf_files):
     """Process PDF files into document chunks"""
@@ -95,9 +102,26 @@ def process_documents(pdf_files):
     
     return all_nodes
 
+def get_embedding_model(model_name: str):
+    """Initialize the HuggingFace embedding model"""
+    logger.info(f"Initializing embedding model: {model_name}")
+    try:
+        # Ensure device is auto-detected or set appropriately if needed
+        embed_model = HuggingFaceEmbedding(model_name=model_name)
+        logger.info("✅ Embedding model initialized successfully.")
+        return embed_model
+    except Exception as e:
+        logger.error(f"❌ Failed to initialize embedding model: {str(e)}")
+        traceback.print_exc()
+        return None
+
 def get_qdrant_cloud_client():
     """Connect to the specified Qdrant cloud instance"""
+    if not QDRANT_HOST or not QDRANT_API_KEY:
+        logger.error("❌ Qdrant host or API key not configured.")
+        return None
     try:
+        logger.info(f"Connecting to Qdrant cloud at {QDRANT_HOST}...")
         client = QdrantClient(
             host=QDRANT_HOST,
             api_key=QDRANT_API_KEY,
@@ -193,7 +217,7 @@ def main():
     
     # Initialize embedding model
     logger.info("Initializing BGE embedding model...")
-    embed_model = HuggingFaceEmbedding(model_name="BAAI/bge-small-en-v1.5")
+    embed_model = get_embedding_model(EMBED_MODEL_NAME)
     
     # Process documents to get nodes
     nodes = process_documents(pdf_files)

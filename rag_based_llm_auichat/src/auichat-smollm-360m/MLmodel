@@ -1,0 +1,31 @@
+flavors:
+  python_function:
+    env:
+      conda: conda.yaml
+      virtualenv: python_env.yaml
+    loader_module: mlflow.transformers
+    python_version: 3.12.3
+  transformers:
+    code: null
+    components:
+    - tokenizer
+    framework: pt
+    instance_type: TextGenerationPipeline
+    model_binary: model
+    pipeline_model_type: LlamaForCausalLM
+    source_model_name: HuggingFaceTB/SmolLM-360M-Instruct
+    task: text-generation
+    tokenizer_type: GPT2TokenizerFast
+    torch_dtype: torch.float32
+    transformers_version: 4.51.3
+is_signature_from_type_hint: false
+mlflow_version: 2.21.3
+model_size_bytes: 1452141569
+model_uuid: 198f7d31b23347e6877de92ff1529250
+prompts: null
+signature:
+  inputs: '[{"type": "string", "required": true}]'
+  outputs: '[{"type": "string", "required": true}]'
+  params: null
+type_hint_from_example: false
+utc_time_created: '2025-04-27 03:09:18.812041'

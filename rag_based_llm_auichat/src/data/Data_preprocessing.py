@@ -12,7 +12,7 @@ def clean_text(text: str) -> str:
     return text
 
 @step
-def preprocess_data(directory: str = "/home/barneh/Rag-Based-LLM_AUIChat/rag_based_llm_auichat/data/raw") -> str:
+def preprocess_data(directory: str = "/home/barneh/Rag-Based-LLM_AUIChat/raw") -> str:
     """Loads, cleans, and chunks documents, then saves the nodes to disk."""
     print(f"📂 Loading documents from {directory}...")
     documents = SimpleDirectoryReader(directory).load_data()

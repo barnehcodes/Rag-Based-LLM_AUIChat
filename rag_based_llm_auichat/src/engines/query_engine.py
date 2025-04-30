@@ -1,7 +1,8 @@
 from zenml import step
 import json
-from src.workflows.config import qdrant_client, COLLECTION_NAME, embed_model, vector_store, EMBED_DIM
-from llama_index.core import VectorStoreIndex
+# Ensure config imports the correct, updated values
+from src.workflows.config import qdrant_client, COLLECTION_NAME, embed_model, vector_store, EMBED_DIM 
+from llama_index.core import VectorStoreIndex, Settings
 import os
 import mlflow
 import mlflow.sklearn  # or whichever flavor you're tracking
@@ -9,15 +10,21 @@ import mlflow.sklearn  # or whichever flavor you're tracking
 # Import the local model handler instead of the HuggingFace API
 from src.engines.local_models.local_llm import LocalLLM
 
+# Note: query_qdrant might be less relevant if queries only come via the UI/API
+# but can be kept for debugging or direct pipeline interaction if needed.
 @step
 def query_qdrant(query_text: str, limit: int = 5):
-    """Queries Qdrant and prints the top-k relevant documents."""
-    # Generate embedding for the query
+    """Queries Qdrant using the configured embed_model and COLLECTION_NAME."""
+    if not qdrant_client or not embed_model:
+        print("❌ Qdrant client or embedding model not initialized. Skipping query.")
+        return []
+        
+    # Generate embedding for the query using the configured model (BGE)
     query_vector = embed_model.get_text_embedding(query_text)
     
-    # Run similarity search in Qdrant
+    # Run similarity search in Qdrant using the configured collection
     search_results = qdrant_client.search(
-        collection_name=COLLECTION_NAME,
+        collection_name=COLLECTION_NAME, # Use updated collection name from config
         query_vector=query_vector,
         limit=limit,
         with_payload=True
@@ -31,27 +38,34 @@ def query_qdrant(query_text: str, limit: int = 5):
         print(f"Document ID: {result.id}")
         
         text = None
-        if 'text' in result.payload:
-            text = result.payload.get('text')
-            file_name = result.payload.get('metadata', {}).get('file_name', result.payload.get('file_name', 'Unknown'))
-        elif 'metadata' in result.payload and 'text' in result.payload['metadata']:
-            text = result.payload['metadata']['text']
-            file_name = result.payload['metadata'].get('file_name', 'Unknown')
-        elif '_node_content' in result.payload:
-            node_content = json.loads(result.payload.get('_node_content', '{}'))
-            text = node_content.get("text", "No text found")
-            file_name = node_content.get('metadata', {}).get('file_name', 'Unknown')
-        elif 'content' in result.payload:
-            content = result.payload['content']
+        # Adjusted payload access logic based on potential structures
+        payload = result.payload if hasattr(result, 'payload') else {}
+        
+        if 'text' in payload:
+            text = payload.get('text')
+            file_name = payload.get('metadata', {}).get('file_name', payload.get('file_name', 'Unknown'))
+        elif 'metadata' in payload and 'text' in payload['metadata']:
+            text = payload['metadata']['text']
+            file_name = payload['metadata'].get('file_name', 'Unknown')
+        elif '_node_content' in payload:
+            try:
+                node_content = json.loads(payload.get('_node_content', '{}'))
+                text = node_content.get("text", "No text found")
+                file_name = node_content.get('metadata', {}).get('file_name', 'Unknown')
+            except json.JSONDecodeError:
+                text = "Error decoding _node_content"
+                file_name = "Unknown"
+        elif 'content' in payload:
+            content = payload['content']
             if isinstance(content, str):
                 try:
                     content_data = json.loads(content)
                     text = content_data.get('text', content)
-                except:
+                except json.JSONDecodeError:
                     text = content
             else:
                 text = str(content)
-            file_name = result.payload.get('file_name', 'Unknown')
+            file_name = payload.get('file_name', 'Unknown')
         
         if text:
             print(f"File: {file_name}")
@@ -59,67 +73,54 @@ def query_qdrant(query_text: str, limit: int = 5):
             results.append({"score": result.score, "file": file_name, "text": text[:500]})
         else:
             print("No text found in payload")
-            print(f"Available payload keys: {list(result.payload.keys())}")
+            print(f"Available payload keys: {list(payload.keys())}")
         
         print("-" * 50)
     
     return results
 
+# This step might be redundant if the query engine is only used by the API,
+# but can be kept if direct pipeline querying is needed.
 @step
 def create_query_engine(query_text: str):
-    """Creates a query engine using the local SmolLM-360M model for RAG queries."""
+    """Creates a query engine using the local SmolLM-360M model and configured vector store/embedding model."""
     try:
-        # Initialize the local LLM model instead of using the Hugging Face Inference API
+        if not vector_store or not embed_model:
+             raise ConnectionError("Vector store or embedding model not initialized. Check config.py and Qdrant connection.")
+             
+        # Initialize the local LLM model
         llm = LocalLLM()
         
-        # Configure llama-index Settings
-        from llama_index.core import Settings
+        # Configure llama-index Settings globally for this step
+        # Ensure the correct embedding model (BGE) is used
         Settings.embed_model = embed_model
+        Settings.llm = llm # Set the local LLM globally for LlamaIndex
         
-        # Ensure vector_store is available from config
-        if not vector_store:
-            raise ConnectionError("Failed to connect to Qdrant vector store. Check config.py and Qdrant instance.")
-
-        # Create an index with the vector store (already configured in config.py)
-        # No need to create a temporary vector store here
+        # Create an index directly from the existing vector store (loaded in config.py)
         index = VectorStoreIndex.from_vector_store(vector_store)
         
         # Create a query engine using the local LLM
         query_engine = index.as_query_engine(
-            llm=llm,
+            # llm=llm, # LLM is now set globally via Settings
             similarity_top_k=3,  # Retrieve top 3 most similar chunks
             streaming=False
         )
         
         # Run the query
-        print(f"📝 Processing query: {query_text}")
+        print(f"Executing query with local LLM: '{query_text}'")
         response = query_engine.query(query_text)
+        print("Query finished.")
         
-        # Log metrics for ZenML/MLflow tracking
-        try:
-            source_nodes = getattr(response, 'source_nodes', [])
-            retrieved_chunks = len(source_nodes) if source_nodes else 0
+        # Log query and response (optional)
+        # with mlflow.start_run():
+        #     mlflow.log_param("query", query_text)
+        #     mlflow.log_text(str(response), "response.txt")
             
-            mlflow.log_metric("response_length", len(str(response)))
-            mlflow.log_metric("retrieved_chunks", retrieved_chunks)
-            
-            # Save query + response for review
-            with open("query_response.txt", "w") as f:
-                f.write(f"Query: {query_text}\n\nResponse:\n{response}")
-                
-                if source_nodes:
-                    f.write("\n\nSources:\n")
-                    for i, node in enumerate(source_nodes):
-                        f.write(f"\nSource {i+1}:\n{node.get_text()[:500]}...\n")
-                        
-            mlflow.log_artifact("query_response.txt")
-        except Exception as log_err:
-            print(f"Warning: Could not log metrics: {str(log_err)}")
-        
-        print(f"✅ Response generated successfully")
-        return response
+        print(f"Response: {str(response)}")
+        return str(response)
         
     except Exception as e:
-        print(f"❌ Error in query engine: {str(e)}")
-        # Return a helpful error message that can be displayed to the user
-        return f"I encountered an error while processing your query. Please try again or contact support.\nError: {str(e)}"
+        print(f"❌ Error creating/using query engine: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return f"Error: {str(e)}"
