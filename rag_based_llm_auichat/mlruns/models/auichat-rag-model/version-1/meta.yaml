@@ -1,0 +1,14 @@
+aliases: []
+creation_timestamp: 1746229316604
+current_stage: None
+description: null
+last_updated_timestamp: 1746229316604
+name: auichat-rag-model
+run_id: 4f3e3791215445bdaac5abcc8a7b78c4
+run_link: null
+source: file:///home/barneh/Rag-Based-LLM_AUIChat/rag_based_llm_auichat/mlruns/0/4f3e3791215445bdaac5abcc8a7b78c4/artifacts/model
+status: READY
+status_message: null
+storage_location: file:///home/barneh/Rag-Based-LLM_AUIChat/rag_based_llm_auichat/mlruns/0/4f3e3791215445bdaac5abcc8a7b78c4/artifacts/model
+user_id: null
+version: 1

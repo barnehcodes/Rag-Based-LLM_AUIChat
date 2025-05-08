@@ -19,7 +19,7 @@ import { Send as SendIcon, SmartToy as BotIcon, Person as PersonIcon, Warning as
 import { animate, createScope, stagger } from 'animejs';
 
 // Updated API URL to use the CORS proxy
-const API_URL = 'http://localhost:5001/api';
+const API_URL = import.meta.env.VITE_API_URL;
 
 const ChatMessage = ({ message, isUser, mode }) => {
   const theme = useTheme();
@@ -220,13 +220,9 @@ const ChatInterface = () => {
         headers: {
           'Content-Type': 'application/json',
         },
-        // Updated body structure to match ChatRequest model
+        // Updated body structure to match the expected format
         body: JSON.stringify({ 
-          messages: [
-            { role: 'user', content: userQuery }
-            // You could potentially include previous messages here if needed
-            // ...messages.slice(-5) // Example: include last 5 messages
-          ]
+          query: userQuery
         }),
       });
       

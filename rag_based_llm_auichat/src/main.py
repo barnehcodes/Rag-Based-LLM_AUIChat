@@ -1,23 +1,39 @@
 from zenml import pipeline, get_step_context
 from zenml.client import Client
+import sys
+import os
+
+# Add the directory containing m5_frontend_client, m7_deployment, src, etc. to sys.path
+# This is the parent directory of the 'src' directory where main.py is located.
+path_to_add = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.append(path_to_add)
+
+from m5_frontend_client.ui_launcher import launch_ui_components
+from m7_deployment.vertex_deployment import deploy_model_to_vertex
+from m7_deployment.cloudrun_deployment_step import deploy_cloudrun_rag_service
+# Import the new UI deployment steps
+from m7_deployment.firebase_ui_deployment import deploy_ui_to_firebase
+from m7_deployment.cloudrun_ui_deployment import deploy_ui_to_cloudrun
+
+# Fix imports with proper absolute paths
+# Import data modules with proper project-relative paths
 from data.Data_preprocessing import preprocess_data
 from data.index_storage import create_and_store_index
 from valisation.validation import validate_qdrant_storage
 from workflows.model_saving import save_model_for_deployment
 from workflows.model_training import placeholder_model_trainer
-from workflows.ui_launcher import launch_ui_components
-from workflows.vertex_deployment import deploy_model_to_vertex
 from zenml.integrations.seldon.services import (
     SeldonDeploymentConfig,
     SeldonDeploymentService,
 )
 from zenml.integrations.seldon.steps import seldon_model_deployer_step
-import sys
-import os
+# Import our development test step
+# from ..tests.development_test_step import run_development_tests # Commented out
 
 # Define constants for deployment
 SELDON_DEPLOYMENT_NAME = "auichat-smollm-deployment"
 MLFLOW_MODEL_NAME = "auichat-smollm-360m"
+QDRANT_COLLECTION_NAME = "AUIChatVectoreCol-384" # Added for vector search
 
 # Activate the GCP stack if running with cloud resources
 def activate_gcp_stack():
@@ -202,6 +218,156 @@ def auichat_no_deploy_pipeline():
     # Launch UI components after model saving
     launch_ui_components(after=[model_uri])
 
+# Add our Cloud Run RAG deployment pipeline with vector search
+@pipeline(enable_cache=False)
+def auichat_cloudrun_rag_pipeline():
+    """
+    Deployment pipeline for AUIChat that uses Google Cloud Run
+    for deploying a RAG service with Qdrant vector similarity search.
+    """
+    # Run the preprocessing and indexing steps
+    nodes_file = preprocess_data()
+    index_status = create_and_store_index(nodes_file)
+    validation_result = validate_qdrant_storage(after=[index_status])
+
+    if not validation_result:
+        print("❌ Qdrant storage validation failed. Stopping pipeline.")
+        return
+
+    # Deploy the RAG service to Cloud Run with vector search
+    try:
+        # Deploy to Cloud Run using our new step
+        cloudrun_info = deploy_cloudrun_rag_service(
+            preprocessed_nodes_path=nodes_file,
+            collection_name=QDRANT_COLLECTION_NAME,
+            after=[validation_result]
+        )
+        
+        print(f"✅ RAG service deployed to Cloud Run!")
+        if isinstance(cloudrun_info, dict) and 'service_url' in cloudrun_info:
+            print(f"   Service URL: {cloudrun_info['service_url']}")
+        
+        # Launch UI components after deployment
+        launch_ui_components(after=[cloudrun_info])
+        
+    except Exception as e:
+        print(f"❌ Cloud Run deployment failed: {str(e)}")
+        print("⚠️ Continuing with UI launch without deployment.")
+        
+        # Launch UI components without deployment
+        launch_ui_components(after=[nodes_file])
+
+# Add our development testing pipeline
+@pipeline(enable_cache=False)
+def auichat_development_test_pipeline():
+    """
+    Development pipeline for AUIChat that runs extensive tests to ensure
+    the system is properly set up before launching the UI.
+    
+    This pipeline checks:
+    1. If the Qdrant collection is properly populated
+    2. If the embedding model is working correctly for vector similarity
+    3. If the RAG endpoint is responding to queries as expected
+    """
+    # Run the development tests
+    test_results = run_development_tests(
+        collection_name=QDRANT_COLLECTION_NAME,
+        min_vectors=500
+    )
+    
+    # When working with ZenML StepArtifacts, we cannot directly access dictionary keys
+    # So we just print a message and continue with launching the UI
+    print("\n✓ Development tests executed!")
+    print("Check the logs above for detailed test results.")
+    print("The UI will now be launched for development purposes.")
+    
+    # Always launch the UI (even if tests failed, for debugging purposes)
+    launch_ui_components(after=[test_results])
+
+# Add Firebase UI deployment pipeline
+@pipeline(enable_cache=False)
+def auichat_firebase_ui_pipeline():
+    """
+    Pipeline for deploying the AUIChat UI to Firebase Hosting.
+    Firebase Hosting is ideal for static web applications like React.
+    """
+    # First run the development tests to ensure everything is working
+    # test_results = run_development_tests(
+    #     collection_name=QDRANT_COLLECTION_NAME,
+    #     min_vectors=500
+    # )
+    
+    # Deploy UI to Firebase Hosting
+    firebase_info = deploy_ui_to_firebase(
+        project_id=os.environ.get("PROJECT_ID", None)
+        # after=[test_results] # Removed dependency on test_results
+    )
+    
+    print("\n✅ UI deployment pipeline completed!")
+    print("Check the deployment info above for the hosting URL.")
+
+# Add Cloud Run UI deployment pipeline
+@pipeline(enable_cache=False)
+def auichat_cloudrun_ui_pipeline():
+    """
+    Pipeline for deploying the AUIChat UI to Google Cloud Run.
+    Cloud Run allows for more complex setups and server-side logic if needed.
+    """
+    # First run the development tests to ensure everything is working
+    test_results = run_development_tests(
+        collection_name=QDRANT_COLLECTION_NAME,
+        min_vectors=500
+    )
+    
+    # Deploy UI to Cloud Run
+    cloudrun_info = deploy_ui_to_cloudrun(
+        project_id=os.environ.get("PROJECT_ID", None),
+        region=os.environ.get("REGION", "europe-west3"),
+        after=[test_results]
+    )
+    
+    print("\n✅ UI deployment pipeline completed!")
+    print("Check the deployment info above for the service URL.")
+
+# Add a full deployment pipeline for both backend and UI
+@pipeline(enable_cache=False)
+def auichat_full_deployment_pipeline():
+    """
+    Full deployment pipeline that deploys both the RAG backend to Cloud Run
+    and the UI to Firebase Hosting.
+    """
+    # Run the preprocessing and indexing steps
+    nodes_file = preprocess_data()
+    index_status = create_and_store_index(nodes_file)
+    validation_result = validate_qdrant_storage(after=[index_status])
+
+    if not validation_result:
+        print("❌ Qdrant storage validation failed. Stopping pipeline.")
+        return
+
+    # Deploy the RAG service to Cloud Run with vector search
+    try:
+        # Deploy to Cloud Run using our new step
+        cloudrun_info = deploy_cloudrun_rag_service(
+            preprocessed_nodes_path=nodes_file,
+            collection_name=QDRANT_COLLECTION_NAME,
+            after=[validation_result]
+        )
+        
+        print(f"✅ RAG service deployed to Cloud Run!")
+        
+        # Deploy UI to Firebase Hosting
+        firebase_info = deploy_ui_to_firebase(
+            project_id=os.environ.get("PROJECT_ID", None),
+            after=[cloudrun_info]
+        )
+        
+        print("\n✅ Full deployment pipeline completed!")
+        print("Your AUIChat application is now fully deployed to Google Cloud!")
+        
+    except Exception as e:
+        print(f"❌ Deployment failed: {str(e)}")
+        print("⚠️ Check the logs above for more details.")
 
 if __name__ == "__main__":
     # Process environment variable for deployment type
@@ -212,7 +378,7 @@ if __name__ == "__main__":
         deployment_type = sys.argv[1].lower()
     
     # Activate appropriate stack based on deployment type
-    if deployment_type in ["seldon", "vertex"]:
+    if deployment_type in ["seldon", "vertex", "cloudrun", "firebaseui", "cloudrun-ui", "full"]:
         activate_gcp_stack()
     
     # Run the appropriate pipeline based on deployment type
@@ -222,6 +388,21 @@ if __name__ == "__main__":
     elif deployment_type == "vertex":
         print("🚀 Running pipeline with Vertex AI deployment...")
         auichat_vertex_deployment_pipeline()
+    elif deployment_type == "cloudrun":
+        print("🚀 Running pipeline with Cloud Run RAG deployment...")
+        auichat_cloudrun_rag_pipeline()
+    elif deployment_type == "firebaseui":
+        print("🚀 Running pipeline with Firebase UI deployment...")
+        auichat_firebase_ui_pipeline()
+    elif deployment_type == "cloudrun-ui":
+        print("🚀 Running pipeline with Cloud Run UI deployment...")
+        auichat_cloudrun_ui_pipeline()
+    elif deployment_type == "full":
+        print("🚀 Running full deployment pipeline (backend + UI)...")
+        auichat_full_deployment_pipeline()
+    elif deployment_type == "dev" or deployment_type == "test":
+        print("🧪 Running development testing pipeline...")
+        auichat_development_test_pipeline()
     else:
         print("🚀 Running pipeline without deployment step...")
         auichat_no_deploy_pipeline()

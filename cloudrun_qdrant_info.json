@@ -1,0 +1,7 @@
+{
+  "service_name": "auichat-rag-qdrant",
+  "service_url": "https://auichat-rag-qdrant-h4ikwiq3ja-uc.a.run.app",
+  "project_id": "deft-waters-458118-a3",
+  "region": "us-central1",
+  "image_name": "gcr.io/deft-waters-458118-a3/auichat-rag-qdrant"
+}

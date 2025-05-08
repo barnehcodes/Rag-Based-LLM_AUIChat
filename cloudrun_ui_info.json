@@ -1,0 +1,9 @@
+{
+  "service_name": "auichat-ui",
+  "service_url": "https://auichat-ui-h4ikwiq3ja-uc.a.run.app",
+  "project_id": "deft-waters-458118-a3",
+  "region": "us-central1",
+  "image_name": "gcr.io/deft-waters-458118-a3/auichat-ui:latest",
+  "rag_endpoint": "https://auichat-rag-qdrant-h4ikwiq3ja-uc.a.run.app",
+  "deployment_date": "2025-05-06 03:27:01 UTC"
+}

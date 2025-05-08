@@ -1,0 +1,15 @@
+artifact_uri: file:///home/barneh/Rag-Based-LLM_AUIChat/rag_based_llm_auichat/src/mlruns/0/2e24640d0f074a579421262b1b127bc4/artifacts
+end_time: 1746383107741
+entry_point_name: ''
+experiment_id: '0'
+lifecycle_stage: active
+run_id: 2e24640d0f074a579421262b1b127bc4
+run_name: exultant-steed-517
+run_uuid: 2e24640d0f074a579421262b1b127bc4
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1746383097237
+status: 3
+tags: []
+user_id: barneh

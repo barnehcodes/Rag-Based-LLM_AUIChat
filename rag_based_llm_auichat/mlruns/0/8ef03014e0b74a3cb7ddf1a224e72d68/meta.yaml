@@ -1,0 +1,15 @@
+artifact_uri: file:///home/barneh/Rag-Based-LLM_AUIChat/rag_based_llm_auichat/mlruns/0/8ef03014e0b74a3cb7ddf1a224e72d68/artifacts
+end_time: 1746228730423
+entry_point_name: ''
+experiment_id: '0'
+lifecycle_stage: active
+run_id: 8ef03014e0b74a3cb7ddf1a224e72d68
+run_name: indecisive-frog-824
+run_uuid: 8ef03014e0b74a3cb7ddf1a224e72d68
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1746228730391
+status: 3
+tags: []
+user_id: barneh

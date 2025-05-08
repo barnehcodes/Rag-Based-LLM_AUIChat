@@ -1,0 +1,15 @@
+artifact_uri: file:///home/barneh/Rag-Based-LLM_AUIChat/rag_based_llm_auichat/mlruns/0/50f3683715cc41189f11b5abf3ed9760/artifacts
+end_time: 1746228995034
+entry_point_name: ''
+experiment_id: '0'
+lifecycle_stage: active
+run_id: 50f3683715cc41189f11b5abf3ed9760
+run_name: handsome-snail-975
+run_uuid: 50f3683715cc41189f11b5abf3ed9760
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1746228995019
+status: 3
+tags: []
+user_id: barneh

@@ -1,0 +1,15 @@
+artifact_uri: file:///home/barneh/Rag-Based-LLM_AUIChat/rag_based_llm_auichat/mlruns/0/4f3e3791215445bdaac5abcc8a7b78c4/artifacts
+end_time: 1746229316613
+entry_point_name: ''
+experiment_id: '0'
+lifecycle_stage: active
+run_id: 4f3e3791215445bdaac5abcc8a7b78c4
+run_name: fortunate-fish-728
+run_uuid: 4f3e3791215445bdaac5abcc8a7b78c4
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1746229309465
+status: 3
+tags: []
+user_id: barneh

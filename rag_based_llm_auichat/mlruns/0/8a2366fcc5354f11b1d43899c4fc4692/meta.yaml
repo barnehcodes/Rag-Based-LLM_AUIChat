@@ -1,0 +1,15 @@
+artifact_uri: file:///home/barneh/Rag-Based-LLM_AUIChat/rag_based_llm_auichat/mlruns/0/8a2366fcc5354f11b1d43899c4fc4692/artifacts
+end_time: 1746232125199
+entry_point_name: ''
+experiment_id: '0'
+lifecycle_stage: active
+run_id: 8a2366fcc5354f11b1d43899c4fc4692
+run_name: burly-cat-445
+run_uuid: 8a2366fcc5354f11b1d43899c4fc4692
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1746232120903
+status: 3
+tags: []
+user_id: barneh

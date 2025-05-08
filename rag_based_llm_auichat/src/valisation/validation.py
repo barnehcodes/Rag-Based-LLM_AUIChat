@@ -1,6 +1,6 @@
 from zenml import step
 import json
-from workflows.config import qdrant_client, COLLECTION_NAME
+from workflows.config.config import qdrant_client, COLLECTION_NAME
 
 @step
 def validate_qdrant_storage():

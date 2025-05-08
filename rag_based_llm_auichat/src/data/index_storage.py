@@ -1,8 +1,7 @@
 from zenml import step
 import pickle
 from llama_index.core import VectorStoreIndex, StorageContext
-from workflows.config import vector_store, embed_model
-
+from workflows.config.config import vector_store, embed_model
 @step
 def create_and_store_index(nodes_file: str):
     """Loads preprocessed nodes from file, creates an index, and stores embeddings in Qdrant."""

@@ -1,7 +1,7 @@
 from zenml import step
 import json
 # Ensure config imports the correct, updated values
-from src.workflows.config import qdrant_client, COLLECTION_NAME, embed_model, vector_store, EMBED_DIM 
+from src.workflows.config.config import qdrant_client, COLLECTION_NAME, embed_model, vector_store, EMBED_DIM 
 from llama_index.core import VectorStoreIndex, Settings
 import os
 import mlflow

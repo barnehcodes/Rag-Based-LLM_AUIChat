@@ -1,0 +1,10 @@
+{
+  "service_name": "auichat-cors-proxy",
+  "service_url": "",
+  "project_id": "deft-waters-458118-a3",
+  "region": "us-central1",
+  "image_name": "gcr.io/deft-waters-458118-a3/auichat-cors-proxy:latest",
+  "rag_endpoint": "https://auichat-rag-qdrant-h4ikwiq3ja-uc.a.run.app",
+  "ui_endpoint": "https://auichat-ui-h4ikwiq3ja-uc.a.run.app",
+  "deployment_date": "2025-05-06 04:22:34 UTC"
+}

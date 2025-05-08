@@ -13,7 +13,7 @@ sys.path.append(str(project_root))
 
 print("Step 1: Testing imports...")
 try:
-    from src.workflows.config import load_environment, qdrant_client, COLLECTION_NAME, embed_model
+    from src.workflows.config.config import load_environment, qdrant_client, COLLECTION_NAME, embed_model
     print("✅ Config imports successful")
 except Exception as e:
     print(f"❌ Config import error: {str(e)}")

@@ -1,0 +1,8 @@
+{
+  "service_name": "auichat-rag-optimized",
+  "service_url": "https://auichat-rag-optimized-h4ikwiq3ja-uc.a.run.app",
+  "project_id": "deft-waters-458118-a3",
+  "region": "us-central1",
+  "image_name": "gcr.io/deft-waters-458118-a3/auichat-rag-optimized",
+  "collection_name": "AUIChatVectoreCol-384"
+}

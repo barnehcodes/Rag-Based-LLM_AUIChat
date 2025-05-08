@@ -19,7 +19,7 @@ import uvicorn
 
 # Import from other modules - use absolute imports
 from rag_based_llm_auichat.src.engines.local_models.local_llm import LocalLLM
-from rag_based_llm_auichat.src.workflows.config import index, embed_model
+from rag_based_llm_auichat.src.workflows.config.config import index, embed_model
 
 # Create FastAPI app
 app = FastAPI(title="RAG-Based LLM AUIChat API")
