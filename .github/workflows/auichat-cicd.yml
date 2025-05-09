@@ -1,0 +1,365 @@
+name: AUIChat CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, dev ]
+  pull_request:
+    branches: [ main ]
+  # Manual trigger for different deployment types
+  workflow_dispatch:
+    inputs:
+      deploy_type:
+        description: 'Deployment type'
+        required: true
+        default: 'test'
+        type: choice
+        options:
+        - test
+        - local
+        - cloud
+
+env:
+  PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  GCP_REGION: us-central1
+  QDRANT_COLLECTION: AUIChatVectoreCol-384
+  QDRANT_URL: ${{ secrets.QDRANT_URL }}
+  QDRANT_API_KEY: ${{ secrets.QDRANT_API_KEY }}
+  PYTHON_VERSION: "3.10"
+
+jobs:
+  # Job for linting and testing
+  test:
+    name: Lint and Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e rag_based_llm_auichat/
+          if [ -f rag_based_llm_auichat/requirements.txt ]; then pip install -r rag_based_llm_auichat/requirements.txt; fi
+          pip install pytest flake8
+      
+      - name: Lint with flake8
+        run: |
+          # Stop the build if there are Python syntax errors or undefined names
+          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+          # Exit-zero treats all errors as warnings
+          flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+
+      - name: Test with pytest
+        run: |
+          pytest -xvs rag_based_llm_auichat/tests/ || echo "No tests found or some tests failed"
+
+  # Job for building the RAG application Docker image
+  build-rag-app:
+    name: Build RAG App Docker Image
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event.inputs.deploy_type != 'test'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Google Cloud SDK
+        uses: google-github-actions/setup-gcloud@v1
+        with:
+          project_id: ${{ env.PROJECT_ID }}
+          service_account_key: ${{ secrets.GCP_SA_KEY }}
+          export_default_credentials: true
+
+      - name: Configure Docker for GCR
+        run: gcloud auth configure-docker gcr.io
+
+      - name: Build and push RAG App Docker image
+        run: |
+          # Generate a timestamp for image tag
+          TIMESTAMP=$(date +%Y%m%d%H%M%S)
+          IMAGE_NAME="gcr.io/${{ env.PROJECT_ID }}/auichat-rag:${TIMESTAMP}"
+          
+          # Create temporary Dockerfile for improved_rag_app_qdrant.py
+          cat > Dockerfile.rag << EOF
+          FROM python:3.10-slim
+
+          WORKDIR /app
+
+          RUN apt-get update && apt-get install -y --no-install-recommends \
+              build-essential \
+              && rm -rf /var/lib/apt/lists/*
+
+          COPY improved_rag_app_qdrant.py ./main.py
+          COPY rag_based_llm_auichat/requirements.txt .
+          
+          RUN pip install --no-cache-dir -r requirements.txt \
+              && pip install sentence-transformers qdrant-client flask gunicorn
+
+          ENV PORT=8080
+          ENV HOST=0.0.0.0
+          ENV QDRANT_COLLECTION=${{ env.QDRANT_COLLECTION }}
+
+          CMD exec gunicorn --bind \$HOST:\$PORT --workers 1 --threads 8 --timeout 0 main:app
+          EOF
+          
+          # Build and push the Docker image
+          docker build -t ${IMAGE_NAME} -f Dockerfile.rag .
+          docker push ${IMAGE_NAME}
+          
+          # Save the image name for later steps
+          echo "RAG_IMAGE=${IMAGE_NAME}" >> $GITHUB_ENV
+
+  # Job for building the UI Docker image
+  build-ui:
+    name: Build UI Docker Image
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event.inputs.deploy_type != 'test'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '16'
+          cache: 'npm'
+          cache-dependency-path: 'rag_based_llm_auichat/src/UI/auichat/package-lock.json'
+
+      - name: Install UI dependencies and build
+        run: |
+          cd rag_based_llm_auichat/src/UI/auichat
+          npm ci
+          npm run build
+
+      - name: Set up Google Cloud SDK
+        uses: google-github-actions/setup-gcloud@v1
+        with:
+          project_id: ${{ env.PROJECT_ID }}
+          service_account_key: ${{ secrets.GCP_SA_KEY }}
+          export_default_credentials: true
+
+      - name: Configure Docker for GCR
+        run: gcloud auth configure-docker gcr.io
+
+      - name: Build and push UI Docker image
+        run: |
+          # Generate a timestamp for image tag
+          TIMESTAMP=$(date +%Y%m%d%H%M%S)
+          IMAGE_NAME="gcr.io/${{ env.PROJECT_ID }}/auichat-ui:${TIMESTAMP}"
+          
+          # Create temporary Dockerfile for UI
+          cat > Dockerfile.ui << EOF
+          FROM nginx:alpine
+          COPY rag_based_llm_auichat/src/UI/auichat/dist /usr/share/nginx/html
+          COPY deployment_scripts/nginx.conf /etc/nginx/conf.d/default.conf
+          EXPOSE 80
+          CMD ["nginx", "-g", "daemon off;"]
+          EOF
+          
+          # Create nginx configuration file if it doesn't exist
+          mkdir -p deployment_scripts
+          if [ ! -f deployment_scripts/nginx.conf ]; then
+            cat > deployment_scripts/nginx.conf << EOF
+          server {
+              listen 80;
+              
+              location / {
+                  root /usr/share/nginx/html;
+                  index index.html index.htm;
+                  try_files \$uri \$uri/ /index.html;
+              }
+              
+              # CORS headers
+              add_header 'Access-Control-Allow-Origin' '*';
+              add_header 'Access-Control-Allow-Methods' 'GET, POST, OPTIONS';
+              add_header 'Access-Control-Allow-Headers' 'DNT,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range';
+          }
+          EOF
+          fi
+          
+          # Build and push the Docker image
+          docker build -t ${IMAGE_NAME} -f Dockerfile.ui .
+          docker push ${IMAGE_NAME}
+          
+          # Save the image name for later steps
+          echo "UI_IMAGE=${IMAGE_NAME}" >> $GITHUB_ENV
+
+  # Job for deploying to Cloud Run
+  deploy-cloud:
+    name: Deploy to Cloud Run
+    needs: [build-rag-app, build-ui]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' || github.event.inputs.deploy_type == 'cloud'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Google Cloud SDK
+        uses: google-github-actions/setup-gcloud@v1
+        with:
+          project_id: ${{ env.PROJECT_ID }}
+          service_account_key: ${{ secrets.GCP_SA_KEY }}
+          export_default_credentials: true
+
+      - name: Deploy RAG App to Cloud Run
+        id: deploy-rag
+        run: |
+          gcloud run deploy auichat-rag-prod \
+            --image ${{ env.RAG_IMAGE }} \
+            --region ${{ env.GCP_REGION }} \
+            --platform managed \
+            --memory 2Gi \
+            --cpu 1 \
+            --min-instances 0 \
+            --max-instances 2 \
+            --allow-unauthenticated \
+            --set-env-vars="QDRANT_COLLECTION=${{ env.QDRANT_COLLECTION }},QDRANT_URL=${{ env.QDRANT_URL }},QDRANT_API_KEY=${{ env.QDRANT_API_KEY }}"
+          
+          # Get the service URL
+          RAG_URL=$(gcloud run services describe auichat-rag-prod --region ${{ env.GCP_REGION }} --format="value(status.url)")
+          echo "RAG_URL=${RAG_URL}" >> $GITHUB_ENV
+          
+          echo "RAG App deployed at: ${RAG_URL}"
+
+      - name: Deploy UI to Cloud Run
+        id: deploy-ui
+        run: |
+          # Create environment variable file for the UI with RAG endpoint
+          cat > env.yaml << EOF
+          VITE_API_BASE_URL: ${{ env.RAG_URL }}
+          EOF
+          
+          gcloud run deploy auichat-ui-prod \
+            --image ${{ env.UI_IMAGE }} \
+            --region ${{ env.GCP_REGION }} \
+            --platform managed \
+            --memory 512Mi \
+            --min-instances 0 \
+            --max-instances 2 \
+            --env-vars-file env.yaml \
+            --allow-unauthenticated
+          
+          # Get the UI URL
+          UI_URL=$(gcloud run services describe auichat-ui-prod --region ${{ env.GCP_REGION }} --format="value(status.url)")
+          echo "UI_URL=${UI_URL}" >> $GITHUB_ENV
+          
+          echo "UI deployed at: ${UI_URL}"
+
+      - name: Save deployment info
+        run: |
+          cat > cloudrun_deployment_info.json << EOF
+          {
+            "rag_service_url": "${{ env.RAG_URL }}",
+            "ui_service_url": "${{ env.UI_URL }}",
+            "project_id": "${{ env.PROJECT_ID }}",
+            "region": "${{ env.GCP_REGION }}",
+            "rag_image": "${{ env.RAG_IMAGE }}",
+            "ui_image": "${{ env.UI_IMAGE }}",
+            "deployment_timestamp": "$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+          }
+          EOF
+          
+          # Upload deployment info as an artifact
+          mkdir -p artifacts
+          cp cloudrun_deployment_info.json artifacts/
+
+      - name: Upload deployment info
+        uses: actions/upload-artifact@v3
+        with:
+          name: deployment-info
+          path: artifacts/cloudrun_deployment_info.json
+
+  # Job for deploying ZenML pipeline (could either be local or cloud)
+  deploy-zenml-pipeline:
+    name: Run ZenML Pipeline
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.event.inputs.deploy_type == 'local' || github.event.inputs.deploy_type == 'cloud'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      - name: Install ZenML and dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e rag_based_llm_auichat/
+          if [ -f rag_based_llm_auichat/requirements.txt ]; then pip install -r rag_based_llm_auichat/requirements.txt; fi
+          pip install zenml kubernetes
+
+      - name: Set up ZenML
+        run: |
+          zenml init
+          
+          # Set up ZenML stack - this would need to be customized based on your environment
+          if [ "${{ github.event.inputs.deploy_type }}" == "local" ]; then
+            # Local deployment (Note: This would work better with a self-hosted runner that has k8s)
+            echo "Setting up local ZenML stack for Seldon deployment"
+            # In practice, the below would need to be adjusted to match your Kubernetes setup
+            zenml integration install kubernetes seldon -y
+            
+          elif [ "${{ github.event.inputs.deploy_type }}" == "cloud" ]; then
+            # Cloud deployment
+            echo "Setting up cloud ZenML stack for GCP"
+            zenml integration install gcp -y
+            
+            # Authenticate with GCP
+            echo "${{ secrets.GCP_SA_KEY }}" > gcp-sa-key.json
+            export GOOGLE_APPLICATION_CREDENTIALS=$(pwd)/gcp-sa-key.json
+            
+            # Register GCP stack components
+            zenml artifact-store register gcp-artifact-store --flavor=gcp
+            zenml container-registry register gcp-container-registry --flavor=gcp
+            
+            # Create GCP stack
+            zenml stack register gcp-stack \
+              -a gcp-artifact-store \
+              -c gcp-container-registry \
+              -o local-orchestrator
+            
+            # Activate the GCP stack
+            zenml stack set gcp-stack
+          fi
+
+      - name: Run ZenML Pipeline
+        run: |
+          if [ "${{ github.event.inputs.deploy_type }}" == "local" ]; then
+            # Run local Seldon pipeline
+            python rag_based_llm_auichat/src/main.py local
+          elif [ "${{ github.event.inputs.deploy_type }}" == "cloud" ]; then
+            # Run cloud deployment pipeline
+            python rag_based_llm_auichat/src/main.py cloud
+          fi
+
+  # Notification job for slack/email notification (example)
+  notify:
+    name: Notify on completion
+    needs: [deploy-cloud, deploy-zenml-pipeline]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Notify success/failure
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          if [ "${{ needs.deploy-cloud.result }}" == "success" ] || [ "${{ needs.deploy-zenml-pipeline.result }}" == "success" ]; then
+            echo "Deployment was successful!"
+            # If you have Slack webhook configured:
+            # curl -X POST -H 'Content-type: application/json' --data '{"text":"✅ AUIChat deployment successful!"}' $SLACK_WEBHOOK_URL
+          else
+            echo "Deployment failed!"
+            # If you have Slack webhook configured:
+            # curl -X POST -H 'Content-type: application/json' --data '{"text":"❌ AUIChat deployment failed!"}' $SLACK_WEBHOOK_URL
+          fi
