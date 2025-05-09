@@ -28,7 +28,7 @@ AUIChat is a Retrieval-Augmented Generation (RAG) based application that uses sm
 
 Live demo: [https://auichat-988ef.firebaseapp.com/](https://auichat-988ef.firebaseapp.com/)
 ## Application Architecture 
-[arch](rag_based_llm_auichat/ML5/arch.png)
+[arch](./arch.png)
 ## Application Development
 
 ### Serving Modes Implementation
