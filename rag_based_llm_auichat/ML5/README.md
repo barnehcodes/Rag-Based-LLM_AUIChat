@@ -28,7 +28,7 @@ AUIChat is a Retrieval-Augmented Generation (RAG) based application that uses sm
 
 Live demo: [https://auichat-988ef.firebaseapp.com/](https://auichat-988ef.firebaseapp.com/)
 ## Application Architecture 
-[arch](./arch.png)
+![arch](./arch.png)
 ## Application Development
 
 ### Serving Modes Implementation
@@ -180,7 +180,7 @@ The application uses multiple serving runtimes depending on the deployment scena
 
 ### Local Deployment Pipeline
 
-[local_pipeline](./pipline_local.png)
+![local_pipeline](./pipline_local.png)
 
 The local deployment pipeline uses Seldon Core and Kubernetes for deployment:
 
