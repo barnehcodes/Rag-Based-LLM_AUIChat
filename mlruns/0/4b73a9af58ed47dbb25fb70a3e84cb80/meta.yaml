@@ -1,0 +1,15 @@
+artifact_uri: mlflow-artifacts:/0/4b73a9af58ed47dbb25fb70a3e84cb80/artifacts
+end_time: 1746740705532
+entry_point_name: ''
+experiment_id: '0'
+lifecycle_stage: active
+run_id: 4b73a9af58ed47dbb25fb70a3e84cb80
+run_name: defiant-ray-991
+run_uuid: 4b73a9af58ed47dbb25fb70a3e84cb80
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1746740685775
+status: 3
+tags: []
+user_id: barneh

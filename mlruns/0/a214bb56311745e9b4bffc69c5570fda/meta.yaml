@@ -1,0 +1,15 @@
+artifact_uri: mlflow-artifacts:/0/a214bb56311745e9b4bffc69c5570fda/artifacts
+end_time: 1746738234333
+entry_point_name: ''
+experiment_id: '0'
+lifecycle_stage: active
+run_id: a214bb56311745e9b4bffc69c5570fda
+run_name: serious-pug-545
+run_uuid: a214bb56311745e9b4bffc69c5570fda
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1746738215590
+status: 3
+tags: []
+user_id: barneh

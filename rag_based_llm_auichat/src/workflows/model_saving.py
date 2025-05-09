@@ -10,19 +10,22 @@ import tempfile
 
 # Use the correct HuggingFace model ID instead of a local path
 MODEL_ID = "HuggingFaceTB/SmolLM-360M-Instruct"
-MLFLOW_MODEL_NAME = "auichat-smollm-360m"
 
 logger = get_logger(__name__)
 
 @step(enable_cache=False)
-def save_model_for_deployment() -> str:
+def save_model_for_deployment(model_name: str = "auichat-smollm-360m") -> str:
     """
     Loads the SmolLM model and tokenizer from Hugging Face Hub and saves them using MLflow.
-
+    
+    Args:
+        model_name: Name to use for the saved model (default: "auichat-smollm-360m")
+        
     Returns:
         The MLflow URI of the saved model artifact.
     """
     logger.info(f"⏳ Loading model and tokenizer from {MODEL_ID}...")
+    logger.info(f"Will save model with name: {model_name}")
     device = "cuda" if torch.cuda.is_available() else "cpu"
     logger.info(f"Using device: {device}")
     
@@ -51,7 +54,7 @@ def save_model_for_deployment() -> str:
 
     # Create a unique model path with timestamp to avoid conflicts
     timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-    unique_model_path = f"{MLFLOW_MODEL_NAME}_{timestamp}"
+    unique_model_path = f"{model_name}_{timestamp}"
     
     # Create a temporary directory for saving the model
     temp_dir = tempfile.mkdtemp(prefix="mlflow_model_")
@@ -69,9 +72,13 @@ def save_model_for_deployment() -> str:
                 pip_requirements=pip_requirements
             )
             run_id = run.info.run_id
-            model_uri = f"runs:/{run_id}/{unique_model_path}"  # Update the URI to match the path
+            # Create a model URI that can be used by Seldon
+            # Use the local path instead of run URI, as Seldon might need direct access
+            model_uri = model_path
+            
+            # Log the MLflow run ID for reference
             logger.info(f"✅ Model saved successfully in MLflow run: {run_id}")
-            logger.info(f"   Model URI: {model_uri}")
+            logger.info(f"   Model saved to path: {model_path}")
             return model_uri
         except Exception as e:
             logger.error(f"❌ Error saving model with MLflow: {e}")
