@@ -1,0 +1,15 @@
+artifact_uri: mlflow-artifacts:/0/c022dab194944130b61bfa4ec9d5f4d2/artifacts
+end_time: 1746825726024
+entry_point_name: ''
+experiment_id: '0'
+lifecycle_stage: active
+run_id: c022dab194944130b61bfa4ec9d5f4d2
+run_name: flawless-steed-662
+run_uuid: c022dab194944130b61bfa4ec9d5f4d2
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1746825725263
+status: 4
+tags: []
+user_id: barneh

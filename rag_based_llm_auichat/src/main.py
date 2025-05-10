@@ -12,8 +12,8 @@ sys.path.append(path_to_add)
 logger = get_logger(__name__) # Initialize logger for main.py
 
 # --- Existing Imports ---
-from m5_frontend_client.ui_launcher import launch_ui_components
-from m7_deployment.firebase_ui_deployment import deploy_ui_to_firebase
+from ML5.m5_frontend_client.ui_launcher import launch_ui_components
+from ML5.m7_deployment.firebase_ui_deployment import deploy_ui_to_firebase
 # Import the Seldon components for the local deployment pipeline
 from zenml.integrations.seldon.services import (
     SeldonDeploymentConfig,

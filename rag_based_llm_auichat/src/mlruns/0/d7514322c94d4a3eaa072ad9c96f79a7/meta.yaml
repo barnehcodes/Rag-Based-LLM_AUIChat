@@ -1,0 +1,15 @@
+artifact_uri: file:///home/barneh/Rag-Based-LLM_AUIChat/rag_based_llm_auichat/src/mlruns/0/d7514322c94d4a3eaa072ad9c96f79a7/artifacts
+end_time: 1746817755965
+entry_point_name: ''
+experiment_id: '0'
+lifecycle_stage: active
+run_id: d7514322c94d4a3eaa072ad9c96f79a7
+run_name: languid-elk-578
+run_uuid: d7514322c94d4a3eaa072ad9c96f79a7
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1746817747745
+status: 3
+tags: []
+user_id: barneh

@@ -124,17 +124,21 @@ class LocalLLM(LLM):
             str: A prompt string formatted for the model
         """
         prompt_parts = []
-        system_prompt = "SYSTEM: You are an AI assistant for Al Akhawayn University in Ifrane. Please answer the following questions accurately and helpfully based on the provided context."
+        system_message = None
         last_user_message = None
 
-        # Find the last user message
-        for msg in reversed(messages):
-            if msg.role == MessageRole.USER:
+        # First parse messages to find the important ones
+        for msg in messages:
+            if msg.role == MessageRole.SYSTEM:
+                system_message = msg
+            elif msg.role == MessageRole.USER:
                 last_user_message = msg
-                break
         
-        # Add the system prompt
-        prompt_parts.append(system_prompt)
+        # Add system prompt if found (for direct chat method)
+        # Skip this for RAG contexts - they should come through complete() method
+        # with their own fully formatted prompt
+        if system_message:
+            prompt_parts.append(f"SYSTEM: {system_message.content}")
         
         # Add the last user message if found
         if last_user_message:
@@ -147,19 +151,6 @@ class LocalLLM(LLM):
         prompt_parts.append("ASSISTANT:")
             
         final_prompt = "\n".join(prompt_parts)
-        
-        # Optional: Add a check/truncation based on token count if needed, 
-        # but limiting to system + last user message should generally work for SmolLM-360M
-        # max_prompt_tokens = 1800 # Leave some room for generation
-        # tokenized_prompt = self._pipeline.tokenizer.encode(final_prompt)
-        # if len(tokenized_prompt) > max_prompt_tokens:
-        #     truncated_tokens = tokenized_prompt[:max_prompt_tokens]
-        #     final_prompt = self._pipeline.tokenizer.decode(truncated_tokens, skip_special_tokens=True)
-        #     # Ensure it ends correctly
-        #     if not final_prompt.endswith("ASSISTANT:"):
-        #         final_prompt += "\nASSISTANT:"
-        #     print(f"Warning: Prompt truncated to {len(final_prompt)} characters to fit context window.")
-
         return final_prompt
     
     def stream_complete(self, prompt: str, **kwargs: Any) -> CompletionResponseGen:

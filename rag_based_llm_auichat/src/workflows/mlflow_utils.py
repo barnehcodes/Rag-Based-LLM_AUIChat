@@ -20,7 +20,8 @@ def is_port_in_use(port: int) -> bool:
 @step
 def launch_mlflow_dashboard_step() -> str:
     """
-    Launches the MLflow UI dashboard as a background process.
+    Launches the MLflow UI dashboard as a background process using nohup to ensure it remains
+    running after the pipeline completes.
     Changes to the notebooks directory and uses the mlruns directory there.
     
     Returns:
@@ -47,49 +48,60 @@ def launch_mlflow_dashboard_step() -> str:
         logger.info(f"Port {port} is already in use. MLflow UI might already be running.")
         return f"mlflow_port_{port}_already_in_use"
     
-    # MLflow command to start the UI server
-    backend_store_uri = "file:./mlruns"  # Relative to notebooks_dir
-    mlflow_cmd = [
-        "mlflow", "ui",
-        "--backend-store-uri", backend_store_uri,
-        "--host", "0.0.0.0",
-        "--port", str(port)
-    ]
+    # Create a shell script to launch MLflow UI
+    script_content = f"""#!/bin/bash
+cd {notebooks_dir}
+nohup mlflow ui --backend-store-uri file:./mlruns --host 0.0.0.0 --port {port} > mlflow_ui.log 2>&1 &
+echo $! > mlflow_ui.pid
+echo "MLflow UI started on port {port}. PID saved to mlflow_ui.pid."
+echo "Dashboard available at: http://localhost:{port}"
+echo "Log file: mlflow_ui.log"
+"""
     
+    # Write the script to the notebooks directory
+    script_path = notebooks_dir / "launch_mlflow_ui.sh"
     try:
-        logger.info(f"Executing MLflow command in {notebooks_dir}: {' '.join(mlflow_cmd)}")
+        with open(script_path, "w") as f:
+            f.write(script_content)
         
-        # Start MLflow UI as a background process in the notebooks directory
-        process = subprocess.Popen(
-            mlflow_cmd,
-            cwd=str(notebooks_dir),  # Run in notebooks directory
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
+        # Make the script executable
+        os.chmod(script_path, 0o755)
+        
+        # Execute the script
+        logger.info(f"Executing MLflow launch script at {script_path}")
+        result = subprocess.run(
+            ["bash", str(script_path)],
+            cwd=str(notebooks_dir),
+            capture_output=True,
             text=True
         )
         
-        # Give it a moment to start
-        time.sleep(3)
-        
-        # Check if process is still running
-        if process.poll() is not None:
-            # Process terminated already
-            stderr = process.stderr.read() if process.stderr else "N/A"
-            stdout = process.stdout.read() if process.stdout else "N/A"
-            logger.error(f"MLflow UI failed to start. Return code: {process.returncode}")
-            logger.error(f"Stderr: {stderr}")
-            logger.error(f"Stdout: {stdout}")
+        if result.returncode == 0:
+            logger.info(f"MLflow UI dashboard script executed successfully")
+            logger.info(result.stdout)
+            logger.info(f"Dashboard available at: http://localhost:{port}")
+            
+            # Write instructions to a file for the user
+            instructions = f"""
+MLflow Dashboard Instructions:
+=============================
+The MLflow UI dashboard has been started on port {port}.
+You can access it at: http://localhost:{port}
+
+If the dashboard is not accessible, check the log file:
+{notebooks_dir}/mlflow_ui.log
+
+To stop the dashboard, run:
+kill $(cat {notebooks_dir}/mlflow_ui.pid)
+"""
+            with open(notebooks_dir / "mlflow_dashboard_instructions.txt", "w") as f:
+                f.write(instructions)
+                
+            return f"mlflow_dashboard_launched_on_port_{port}"
+        else:
+            logger.error(f"MLflow UI script failed. Return code: {result.returncode}")
+            logger.error(f"Stderr: {result.stderr}")
             return "mlflow_launch_failed"
-        
-        # Process is running
-        logger.info(f"MLflow UI dashboard started successfully (PID: {process.pid})")
-        logger.info(f"Dashboard available at: http://localhost:{port}")
-        
-        return f"mlflow_dashboard_launched_on_port_{port}"
-        
-    except FileNotFoundError:
-        logger.error("MLflow command not found. Ensure MLflow is installed.")
-        return "mlflow_launch_failed_command_not_found"
         
     except Exception as e:
         logger.error(f"Failed to launch MLflow UI: {e}")

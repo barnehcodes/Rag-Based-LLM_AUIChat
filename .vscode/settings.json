@@ -1,5 +1,6 @@
 {
     "python.analysis.extraPaths": [
-        "./rag_based_llm_auichat/src"
+        "./rag_based_llm_auichat/src",
+        "./rag_based_llm_auichat/ML5"
     ]
 }

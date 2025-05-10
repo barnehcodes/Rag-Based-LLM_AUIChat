@@ -1,0 +1,15 @@
+artifact_uri: mlflow-artifacts:/0/9e7d92258e564da195c708b122311ecd/artifacts
+end_time: 1746820206058
+entry_point_name: ''
+experiment_id: '0'
+lifecycle_stage: active
+run_id: 9e7d92258e564da195c708b122311ecd
+run_name: fun-newt-802
+run_uuid: 9e7d92258e564da195c708b122311ecd
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1746820205302
+status: 4
+tags: []
+user_id: barneh

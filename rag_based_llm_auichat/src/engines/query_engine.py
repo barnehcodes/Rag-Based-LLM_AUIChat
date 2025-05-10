@@ -2,13 +2,16 @@ from zenml import step
 import json
 # Ensure config imports the correct, updated values
 from src.workflows.config.config import qdrant_client, COLLECTION_NAME, embed_model, vector_store, EMBED_DIM 
-from llama_index.core import VectorStoreIndex, Settings
+from llama_index.core import VectorStoreIndex, Settings, PromptTemplate # Added PromptTemplate
 import os
 import mlflow
 import mlflow.sklearn  # or whichever flavor you're tracking
 
 # Import the local model handler instead of the HuggingFace API
 from src.engines.local_models.local_llm import LocalLLM
+
+# Import constants from model_saving.py for consistency
+from src.workflows.model_saving import SIMILARITY_TOP_K, CUSTOM_QA_TEMPLATE_STR
 
 # Note: query_qdrant might be less relevant if queries only come via the UI/API
 # but can be kept for debugging or direct pipeline interaction if needed.
@@ -83,7 +86,9 @@ def query_qdrant(query_text: str, limit: int = 5):
 # but can be kept if direct pipeline querying is needed.
 @step
 def create_query_engine(query_text: str):
-    """Creates a query engine using the local SmolLM-360M model and configured vector store/embedding model."""
+    """Creates a query engine using the local SmolLM-360M model and configured vector store/embedding model.
+    Uses SIMILARITY_TOP_K and CUSTOM_QA_TEMPLATE_STR from model_saving.py for consistency.
+    """
     try:
         if not vector_store or not embed_model:
              raise ConnectionError("Vector store or embedding model not initialized. Check config.py and Qdrant connection.")
@@ -99,15 +104,18 @@ def create_query_engine(query_text: str):
         # Create an index directly from the existing vector store (loaded in config.py)
         index = VectorStoreIndex.from_vector_store(vector_store)
         
-        # Create a query engine using the local LLM
+        # Define QA Prompt Template from imported string
+        qa_template = PromptTemplate(CUSTOM_QA_TEMPLATE_STR)
+        
+        # Create a query engine using the local LLM, imported SIMILARITY_TOP_K and QA template
         query_engine = index.as_query_engine(
-            # llm=llm, # LLM is now set globally via Settings
-            similarity_top_k=3,  # Retrieve top 3 most similar chunks
+            similarity_top_k=SIMILARITY_TOP_K,  # Use imported value
+            text_qa_template=qa_template,       # Use imported and prepared template
             streaming=False
         )
         
         # Run the query
-        print(f"Executing query with local LLM: '{query_text}'")
+        print(f"Executing query with local LLM: '{query_text}' using SIMILARITY_TOP_K={SIMILARITY_TOP_K}")
         response = query_engine.query(query_text)
         print("Query finished.")
         

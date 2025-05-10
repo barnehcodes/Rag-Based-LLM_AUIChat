@@ -2,6 +2,8 @@ from zenml import step
 import subprocess
 import os
 import time
+import signal
+import atexit
 from pathlib import Path
 
 # Define paths relative to this script's location
@@ -11,11 +13,39 @@ UI_DIR = SCRIPT_DIR / "src" / "UI"  # Updated path
 REACT_UI_DIR = UI_DIR / "auichat"
 PROJECT_ROOT = SCRIPT_DIR.parent  # rag_based_llm_auichat/
 
+# Store process IDs in files for management
+PID_DIR = PROJECT_ROOT / ".pids"
+API_PID_FILE = PID_DIR / "flask_api.pid"
+PROXY_PID_FILE = PID_DIR / "cors_proxy.pid"
+REACT_PID_FILE = PID_DIR / "react_ui.pid"
+
+def write_pid_file(pid_file, pid):
+    """Write process ID to file."""
+    os.makedirs(os.path.dirname(pid_file), exist_ok=True)
+    with open(pid_file, 'w') as f:
+        f.write(str(pid))
+
+def read_pid_file(pid_file):
+    """Read process ID from file."""
+    try:
+        with open(pid_file, 'r') as f:
+            return int(f.read().strip())
+    except (FileNotFoundError, ValueError):
+        return None
+
+def is_process_running(pid):
+    """Check if a process is running."""
+    try:
+        os.kill(pid, 0)
+        return True
+    except (OSError, TypeError):
+        return False
+
 @step
 def launch_ui_components():
     """
     Launches the Flask API, CORS Proxy, and React UI development server 
-    as background processes.
+    as detached background processes so they continue running after the pipeline completes.
     """
     print("🚀 Launching UI components...")
     
@@ -25,7 +55,7 @@ def launch_ui_components():
         print("Searching for UI directory...")
         # Try to find the UI directory
         possible_ui_dirs = list(PROJECT_ROOT.glob("**/UI"))
-        if possible_ui_dirs:
+        if (possible_ui_dirs):
             UI_DIR_FOUND = possible_ui_dirs[0]
             REACT_UI_DIR_FOUND = UI_DIR_FOUND / "auichat"
             print(f"✅ Found UI directory at: {UI_DIR_FOUND}")
@@ -36,75 +66,162 @@ def launch_ui_components():
         UI_DIR_FOUND = UI_DIR
         REACT_UI_DIR_FOUND = REACT_UI_DIR
     
-    api_process = None
-    proxy_process = None
-    react_process = None
+    # Create scripts directory to store launcher scripts
+    scripts_dir = PROJECT_ROOT / ".scripts"
+    os.makedirs(scripts_dir, exist_ok=True)
     
-    try:
-        # 1. Start Flask API Server
-        print(f"🔄 Starting Flask API server from: {UI_DIR_FOUND}")
-        api_command = ["python", "api.py"]
-        api_process = subprocess.Popen(api_command, cwd=str(UI_DIR_FOUND), stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-        print(f"✅ Flask API server started (PID: {api_process.pid}). Waiting for initialization...")
-        # Give it some time to initialize (adjust if needed)
-        time.sleep(10) 
+    # Check if processes are already running
+    for pid_file, service_name in [(API_PID_FILE, "Flask API"), 
+                                  (PROXY_PID_FILE, "CORS Proxy"), 
+                                  (REACT_PID_FILE, "React UI")]:
+        pid = read_pid_file(pid_file)
+        if pid and is_process_running(pid):
+            print(f"✅ {service_name} is already running (PID: {pid}).")
         
-        # 2. Start CORS Proxy
+    try:
+        # 1. Create and run Flask API Server script
+        api_script_path = scripts_dir / "launch_flask_api.sh"
+        with open(api_script_path, 'w') as f:
+            f.write(f"""#!/bin/bash
+cd {UI_DIR_FOUND}
+# Create directory for PID files if it doesn't exist
+mkdir -p {PID_DIR}
+nohup python api.py > {PROJECT_ROOT}/flask_api.log 2>&1 &
+echo $! > {API_PID_FILE}
+""")
+        os.chmod(api_script_path, 0o755)
+        
+        print(f"🔄 Starting Flask API server from: {UI_DIR_FOUND}")
+        subprocess.run(["bash", str(api_script_path)], check=True)
+        api_pid = read_pid_file(API_PID_FILE)
+        print(f"✅ Flask API server started (PID: {api_pid}). Log file: {PROJECT_ROOT}/flask_api.log")
+        time.sleep(5)  # Give it time to initialize
+        
+        # 2. Create and run CORS Proxy script
+        proxy_script_path = scripts_dir / "launch_cors_proxy.sh"
+        with open(proxy_script_path, 'w') as f:
+            f.write(f"""#!/bin/bash
+cd {UI_DIR_FOUND}
+# Create directory for PID files if it doesn't exist
+mkdir -p {PID_DIR}
+nohup python cors_proxy.py > {PROJECT_ROOT}/cors_proxy.log 2>&1 &
+echo $! > {PROXY_PID_FILE}
+""")
+        os.chmod(proxy_script_path, 0o755)
+        
         print(f"🔄 Starting CORS Proxy server from: {UI_DIR_FOUND}")
-        proxy_command = ["python", "cors_proxy.py"]
-        proxy_process = subprocess.Popen(proxy_command, cwd=str(UI_DIR_FOUND), stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-        print(f"✅ CORS Proxy server started (PID: {proxy_process.pid}).")
+        subprocess.run(["bash", str(proxy_script_path)], check=True)
+        proxy_pid = read_pid_file(PROXY_PID_FILE)
+        print(f"✅ CORS Proxy server started (PID: {proxy_pid}). Log file: {PROJECT_ROOT}/cors_proxy.log")
         time.sleep(2)
 
-        # 3. Start React UI (Vite dev server)
+        # 3. Create and run React UI script
+        react_script_path = scripts_dir / "launch_react_ui.sh"
+        with open(react_script_path, 'w') as f:
+            f.write(f"""#!/bin/bash
+cd {REACT_UI_DIR_FOUND}
+# Create directory for PID files if it doesn't exist
+mkdir -p {PID_DIR}
+# Check if node_modules exists
+if [ ! -d "node_modules" ]; then
+    echo "Installing npm dependencies..."
+    npm install
+fi
+nohup npm run dev > {PROJECT_ROOT}/react_ui.log 2>&1 &
+echo $! > {REACT_PID_FILE}
+""")
+        os.chmod(react_script_path, 0o755)
+        
         print(f"🔄 Starting React UI dev server from: {REACT_UI_DIR_FOUND}")
-        # Check if node_modules exists, run npm install if not
-        if not (REACT_UI_DIR_FOUND / "node_modules").exists():
-            print("node_modules not found. Running 'npm install'...")
-            install_process = subprocess.run(["npm", "install"], cwd=str(REACT_UI_DIR_FOUND), check=True, capture_output=True, text=True)
-            print("npm install completed.")
-            print(install_process.stdout)
-        
-        react_command = ["npm", "run", "dev"]
-        react_process = subprocess.Popen(react_command, cwd=str(REACT_UI_DIR_FOUND), stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-        print(f"✅ React UI dev server started (PID: {react_process.pid}).")
-        print("\n🎉 UI Components launched. Access the UI at http://localhost:5173 (or the port specified by Vite).")
-        print("   Keep this ZenML step running to keep the UI active.")
-        
-        # Keep the step running - Note: This might block pipeline completion in some runners.
-        # A more robust solution might involve detaching these processes or using a dedicated service manager.
-        while True: 
-            time.sleep(60)
-            if api_process.poll() is not None:
-                print("🚨 Flask API process terminated.")
-                break
-            if proxy_process.poll() is not None:
-                print("🚨 CORS Proxy process terminated.")
-                break
-            if react_process.poll() is not None:
-                print("🚨 React UI process terminated.")
-                break
+        subprocess.run(["bash", str(react_script_path)], check=True)
+        react_pid = read_pid_file(REACT_PID_FILE)
+        print(f"✅ React UI dev server started (PID: {react_pid}). Log file: {PROJECT_ROOT}/react_ui.log")
+
+        # Create a management script for the user
+        mgmt_script_path = PROJECT_ROOT / "manage_ui.sh"
+        with open(mgmt_script_path, 'w') as f:
+            f.write(f"""#!/bin/bash
+# UI Management Script
+
+case "$1" in
+  status)
+    echo "Checking UI services status..."
+    
+    if [ -f "{API_PID_FILE}" ] && ps -p $(cat "{API_PID_FILE}") > /dev/null; then
+      echo "✅ Flask API is running (PID: $(cat {API_PID_FILE}))"
+    else
+      echo "❌ Flask API is not running"
+    fi
+    
+    if [ -f "{PROXY_PID_FILE}" ] && ps -p $(cat "{PROXY_PID_FILE}") > /dev/null; then
+      echo "✅ CORS Proxy is running (PID: $(cat {PROXY_PID_FILE}))"
+    else
+      echo "❌ CORS Proxy is not running"
+    fi
+    
+    if [ -f "{REACT_PID_FILE}" ] && ps -p $(cat "{REACT_PID_FILE}") > /dev/null; then
+      echo "✅ React UI is running (PID: $(cat {REACT_PID_FILE}))"
+    else
+      echo "❌ React UI is not running"
+    fi
+    ;;
+    
+  stop)
+    echo "Stopping UI services..."
+    
+    if [ -f "{API_PID_FILE}" ]; then
+      kill $(cat "{API_PID_FILE}") 2>/dev/null || echo "Flask API was not running"
+      rm "{API_PID_FILE}"
+    fi
+    
+    if [ -f "{PROXY_PID_FILE}" ]; then
+      kill $(cat "{PROXY_PID_FILE}") 2>/dev/null || echo "CORS Proxy was not running"
+      rm "{PROXY_PID_FILE}"
+    fi
+    
+    if [ -f "{REACT_PID_FILE}" ]; then
+      kill $(cat "{REACT_PID_FILE}") 2>/dev/null || echo "React UI was not running"
+      rm "{REACT_PID_FILE}"
+    fi
+    
+    echo "All UI services stopped."
+    ;;
+    
+  start)
+    echo "Starting UI services..."
+    bash "{api_script_path}"
+    sleep 2
+    bash "{proxy_script_path}"
+    sleep 2
+    bash "{react_script_path}"
+    echo "All UI services started."
+    ;;
+    
+  restart)
+    $0 stop
+    sleep 2
+    $0 start
+    ;;
+    
+  *)
+    echo "Usage: $0 {start|stop|restart|status}"
+    exit 1
+esac
+""")
+        os.chmod(mgmt_script_path, 0o755)
+
+        print("\n🎉 UI Components launched successfully!")
+        print(f"✅ Access the UI at http://localhost:5173 (or the port specified in {PROJECT_ROOT}/react_ui.log)")
+        print(f"✅ UI components will continue running after the ZenML pipeline completes.")
+        print(f"✅ Use '{mgmt_script_path} status' to check status")
+        print(f"✅ Use '{mgmt_script_path} stop' to stop all UI components")
+        print(f"✅ Use '{mgmt_script_path} restart' to restart UI components")
                 
-    except FileNotFoundError as e:
-        print(f"❌ Error: Command not found. Make sure Python and Node.js/npm are installed and in PATH. Details: {e}")
     except subprocess.CalledProcessError as e:
         print(f"❌ Error during subprocess execution: {e}")
-        print(f"Stderr: {e.stderr}")
+        return "ui_launch_failed"
     except Exception as e:
         print(f"❌ An unexpected error occurred: {e}")
-    finally:
-        print("🛑 Shutting down UI components...")
-        if react_process and react_process.poll() is None:
-            react_process.terminate()
-            react_process.wait()
-            print("React UI stopped.")
-        if proxy_process and proxy_process.poll() is None:
-            proxy_process.terminate()
-            proxy_process.wait()
-            print("CORS Proxy stopped.")
-        if api_process and api_process.poll() is None:
-            api_process.terminate()
-            api_process.wait()
-            print("Flask API stopped.")
+        return "ui_launch_failed"
             
-    return "ui_launched" # Or potentially return PIDs/status
+    return "ui_launched_persistently"
