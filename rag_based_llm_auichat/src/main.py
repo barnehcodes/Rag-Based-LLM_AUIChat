@@ -33,7 +33,7 @@ from src.workflows.mlflow_utils import launch_mlflow_dashboard_step
 from src.workflows.data_validation import validate_processed_data_step
 from src.workflows.cloud_testing import test_cloud_run_endpoint_step
 from src.workflows.ui_build import build_ui_for_firebase_step
-# from src.workflows.custom_cloud_run_deployment import deploy_improved_rag_app_step
+from src.workflows.custom_cloud_run_deployment import deploy_improved_rag_app_step
 
 # Define constants for deployment
 SELDON_DEPLOYMENT_NAME = "auichat-smollm-deployment-local"

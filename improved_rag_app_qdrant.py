@@ -9,6 +9,7 @@ import os
 import random
 import pickle
 from typing import Dict, Any, List
+import re
 
 from flask import Flask, request, jsonify
 from flask_cors import CORS
@@ -52,17 +53,34 @@ def initialize_rag():
     try:
         # Initialize embedding model
         logger.info("Initializing embedding model...")
-        embed_model = HuggingFaceEmbedding(model_name="sentence-transformers/all-MiniLM-L6-v2")
+        embed_model_name = os.environ.get("EMBEDDING_MODEL_NAME", "sentence-transformers/all-MiniLM-L6-v2")
+        embed_model = HuggingFaceEmbedding(model_name=embed_model_name)
         Settings.embed_model = embed_model
         
         # Connect to Qdrant
         logger.info("Connecting to Qdrant...")
         qdrant_url = os.environ.get("QDRANT_URL", "http://localhost:6333")
-        qdrant_client_instance = qdrant_client.QdrantClient(url=qdrant_url)
+        qdrant_api_key = os.environ.get("QDRANT_API_KEY")
+        
+        # Log connection details (excluding sensitive information)
+        logger.info(f"Qdrant URL: {qdrant_url}")
+        logger.info(f"Using API key: {'Yes' if qdrant_api_key else 'No'}")
+        
+        # Initialize Qdrant client with API key if provided
+        if qdrant_api_key:
+            logger.info("Initializing Qdrant client with API key...")
+            qdrant_client_instance = qdrant_client.QdrantClient(
+                url=qdrant_url,
+                api_key=qdrant_api_key
+            )
+        else:
+            logger.info("Initializing Qdrant client without API key...")
+            qdrant_client_instance = qdrant_client.QdrantClient(url=qdrant_url)
         
         # Create vector store and index
         logger.info("Creating vector store with Qdrant...")
         collection_name = os.environ.get("QDRANT_COLLECTION", "auichat_docs")
+        logger.info(f"Using collection: {collection_name}")
         
         # First, check if we can load from the preprocessed nodes file
         try:
@@ -101,12 +119,14 @@ def initialize_rag():
         
         # Initialize the LLM
         logger.info("Setting up LLM...")
+        llm_model_name = os.environ.get("LLM_MODEL_NAME", "HuggingFaceTB/SmolLM-360M-Instruct") # Changed default
+        logger.info(f"Using LLM model: {llm_model_name}")
         Settings.llm = HuggingFaceLLM(
-            model_name="google/flan-t5-base",
-            tokenizer_name="google/flan-t5-base",
+            model_name=llm_model_name,
+            tokenizer_name=llm_model_name,
             max_new_tokens=512,
             context_window=2048,
-            generate_kwargs={"temperature": 0.7, "do_sample": True},
+            generate_kwargs={"temperature": 0.2, "do_sample": True}, # Lowered temperature
         )
         
         logger.info("RAG components initialized successfully")
@@ -188,12 +208,35 @@ def chat():
         
         # Create query engine and execute query
         query_engine = index.as_query_engine(similarity_top_k=3)
-        response = query_engine.query(query)
+        response_obj = query_engine.query(query) # Renamed from response
+        
+        response_text = str(response_obj)
+
+        # --- BEGIN ADDED FORMATTING ---
+        # Format "Step X:" to be on a new line after a period.
+        # e.g., ". Step 1:" becomes ".\nStep 1:"
+        response_text = re.sub(r'\.\s*(Step\s+\d+:)', r'.\n\1', response_text)
+
+        # Format "**Question X:" to "* Question X:"
+        response_text = re.sub(r'\*\*(Question\s+\d+:)', r'* \1', response_text)
+        # --- END ADDED FORMATTING ---
+
+        # --- BEGIN ADDED LOGGING ---
+        if hasattr(response_obj, "source_nodes") and response_obj.source_nodes:
+            logger.info(f"Retrieved {len(response_obj.source_nodes)} source_nodes for query: '{query}'")
+            for i, node_with_score in enumerate(response_obj.source_nodes):
+                logger.info(f"Source Node {i+1} (Score: {node_with_score.score:.4f}):")
+                logger.info(f"Content: {node_with_score.node.get_text()[:500]}...") 
+                if hasattr(node_with_score.node, "metadata"):
+                    logger.info(f"Metadata: {node_with_score.node.metadata}")
+        else:
+            logger.info(f"No source_nodes retrieved for query: '{query}'")
+        # --- END ADDED LOGGING ---
         
         # Extract source information if available
         sources = []
-        if hasattr(response, "source_nodes") and response.source_nodes:
-            for node in response.source_nodes:
+        if hasattr(response_obj, "source_nodes") and response_obj.source_nodes:
+            for node in response_obj.source_nodes:
                 if hasattr(node, "metadata") and node.metadata:
                     source_info = {
                         "file_name": node.metadata.get("file_name", "Unknown"),
@@ -204,7 +247,7 @@ def chat():
         
         logger.info(f"Returning response with {len(sources)} sources")
         return jsonify({
-            "response": str(response),
+            "response": response_text,  # Use the modified text
             "sources": sources
         })
     
@@ -266,12 +309,34 @@ def api_chat():
         
         # Create query engine and execute query
         query_engine = index.as_query_engine(similarity_top_k=3)
-        response = query_engine.query(query)
+        response_obj = query_engine.query(query) # Renamed from response
+
+        response_text = str(response_obj)
+
+        # --- BEGIN ADDED FORMATTING ---
+        # Format "Step X:" to be on a new line after a period.
+        # e.g., ". Step 1:" becomes ".\nStep 1:"
+        response_text = re.sub(r'\.\s*(Step\s+\d+:)', r'.\n\1', response_text)
+
+        # Format "**Question X:" to "* Question X:"
+        response_text = re.sub(r'\*\*(Question\s+\d+:)', r'* \1', response_text)
+        # --- END ADDED FORMATTING ---
+
+        # --- BEGIN ADDED LOGGING ---
+        if hasattr(response_obj, "source_nodes") and response_obj.source_nodes:
+            logger.info(f"Retrieved {len(response_obj.source_nodes)} source_nodes for query: '{query}'")
+            for i, node_with_score in enumerate(response_obj.source_nodes):
+                logger.info(f"Source Node {i+1} (Score: {node_with_score.score:.4f}):")
+                logger.info(f"Content: {node_with_score.node.get_text()[:500]}...")
+                if hasattr(node_with_score.node, "metadata"):
+                    logger.info(f"Metadata: {node_with_score.node.metadata}")
+        else:
+            logger.info(f"No source_nodes retrieved for query: '{query}'")
+        # --- END ADDED LOGGING ---
         
-        # Extract source information if available
         sources = []
-        if hasattr(response, "source_nodes") and response.source_nodes:
-            for node in response.source_nodes:
+        if hasattr(response_obj, "source_nodes") and response_obj.source_nodes:
+            for node in response_obj.source_nodes:
                 if hasattr(node, "metadata") and node.metadata:
                     source_info = {
                         "file_name": node.metadata.get("file_name", "Unknown"),
@@ -282,7 +347,7 @@ def api_chat():
         
         logger.info(f"Returning response with {len(sources)} sources")
         return jsonify({
-            "response": str(response),
+            "response": response_text,  # Use the modified text
             "sources": sources
         })
     
