@@ -8,13 +8,33 @@ Focus on enhancing the cloud deployment pipeline (`auichat_cloud_deployment_pipe
 ## Feature Breakdown, Feasibility, and Tools:
 
 1.  **Model Evaluation (Unseen Data):**
-    *   **Status:** Not Started
+    *   **Status:** Implemented (with Vertex AI integration)
     *   **Feasibility:** High.
-    *   **Approach:** Add a ZenML step after model deployment (or before promotion in CT). Curate an unseen dataset. Calculate RAG-specific metrics (Faithfulness, Answer Relevancy, Context Precision/Recall). Log metrics to MLflow.
+    *   **Approach:** Integrated evaluation using Google Vertex AI and Cloud Functions. Tracks RAG-specific metrics over time and stores results in Cloud Storage. Implemented as ZenML step in cloud deployment pipeline.
     *   **Tools:**
-        *   Python scripts
-        *   RAGAs (library)
-        *   MLflow
+        *   Google Cloud Vertex AI
+        *   Google Cloud Functions
+        *   Google Cloud Storage
+        *   Google Cloud Scheduler
+        *   ZenML (pipeline integration)
+    *   **Implementation Details:**
+        * Created `vertex_ai_evaluation.py` with a comprehensive implementation that:
+            * Registers the existing Cloud Run RAG endpoint in Vertex AI Model Registry
+            * Evaluates key RAG metrics: Context Precision, Context Recall, Faithfulness, and Answer Relevancy
+            * Creates visualization dashboards for performance monitoring
+            * Handles validation dataset with reference answers for automatic evaluation
+        * Set up a complete centralized evaluation platform:
+            * ZenML step integration (`vertex_ai_evaluation_step`)
+            * Cloud Function for scheduled evaluations
+            * Cloud Storage bucket for storing evaluation history
+            * Cloud Scheduler job for daily automatic assessment
+        * Test dataset of 5 AUI-specific questions created with reference answers
+        * Includes both standalone evaluation script and pipeline integration
+    *   **Next Steps:**
+        * Implement alerts for metric degradation
+        * Expand the test dataset for more comprehensive evaluation
+        * Add evaluation tracking in Vertex AI Experiments
+        * Integrate with MLflow for metrics visualization
 
 2.  **Online Testing (A/B Testing, Bandit):**
     *   **Status:** Not Started
@@ -81,6 +101,6 @@ Focus on enhancing the cloud deployment pipeline (`auichat_cloud_deployment_pipe
 
 ## Easiest and Most Effective First Steps:
 
-1.  **Offline Evaluation:** Implement "Model evaluation using unseen data".
+1.  **Offline Evaluation:** Implement "Model evaluation using unseen data". (Currently blocked by API limits)
 2.  **Basic Data Drift Detection:** Start with monitoring query embedding drift.
 3.  **Robustness Testing:** Add a behavioral testing step with a few key test types.
