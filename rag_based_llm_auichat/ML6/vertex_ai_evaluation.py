@@ -28,18 +28,22 @@ TEST_DATA = [
         "question": "What are the counseling services available at AUI?",
         "reference_answer": "AUI offers individual counseling, group counseling, and crisis intervention services to students. These services are confidential and aim to support students' mental health and well-being during their academic journey."
     },
+
     {
         "question": "What is the process for undergraduate admission as a transfer student?",
         "reference_answer": "Transfer students need to submit an application, official transcripts from all previously attended institutions, a personal statement, and meet minimum GPA requirements. Transfer credits may be evaluated for course equivalency."
     },
+
     {
         "question": "What are the program requirements for PiP 24-25?",
         "reference_answer": "The PiP 24-25 program requires students to complete core courses, participate in practical experiences, and complete a capstone project. Specific requirements include maintaining a minimum GPA and fulfilling attendance requirements."
     },
+    
     {
         "question": "What is the deadline for undergraduate admission applications?",
         "reference_answer": "The application deadlines vary by semester. For fall admission, applications are typically due by early summer, while spring admission applications are due in late fall."
     },
+    
     {
         "question": "What are the housing options for students at AUI?",
         "reference_answer": "AUI offers on-campus dormitories and apartments for students. Housing options include single and shared rooms with various amenities. Off-campus housing assistance is also available through the housing office."
