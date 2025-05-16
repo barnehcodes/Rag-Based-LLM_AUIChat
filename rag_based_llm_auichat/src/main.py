@@ -34,6 +34,8 @@ from src.workflows.data_validation import validate_processed_data_step
 from src.workflows.cloud_testing import test_cloud_run_endpoint_step
 from src.workflows.ui_build import build_ui_for_firebase_step
 from src.workflows.custom_cloud_run_deployment import deploy_improved_rag_app_step
+from src.workflows.vertex_evaluation_step import vertex_ai_evaluation_step
+from src.workflows.ab_testing_step import ab_testing_step
 
 # Define constants for deployment
 SELDON_DEPLOYMENT_NAME = "auichat-smollm-deployment-local"
@@ -196,11 +198,44 @@ def auichat_cloud_deployment_pipeline():
         cloud_run_deployment_info=cloud_run_deployment_info
     )
 
+    # --- STEP 3.5: EVALUATE_MODEL_WITH_VERTEX_AI ---
+    logger.info("--- BIG STEP: EVALUATE_RAG_WITH_VERTEX_AI ---")
+    
+    # Evaluate the RAG system using Vertex AI
+    evaluation_results = vertex_ai_evaluation_step(
+        cloud_run_deployment_info=cloud_run_deployment_info,
+        project_id=PROJECT_ID,
+        region=GCP_REGION,
+        after=[endpoint_test_status]
+    )
+    
+    # --- STEP 3.6: A/B TESTING AGAINST BASELINE (if specified) ---
+    logger.info("--- BIG STEP: A/B TESTING RAG SYSTEMS ---")
+    
+    # Get baseline endpoint from environment variable or skip A/B testing
+    baseline_endpoint = os.environ.get("AUICHAT_BASELINE_ENDPOINT", None)
+    current_endpoint = cloud_run_deployment_info.get("service_url")
+    
+    if baseline_endpoint:
+        logger.info(f"Running A/B testing against baseline: {baseline_endpoint}")
+        # Run A/B testing between baseline and current deployment
+        ab_test_results = ab_testing_step(
+            current_endpoint=baseline_endpoint,
+            modified_endpoint=current_endpoint, 
+            project_id=PROJECT_ID,
+            region=GCP_REGION,
+            after=[evaluation_results]
+        )
+        last_step = ab_test_results
+    else:
+        logger.info("Skipping A/B testing (no baseline endpoint specified)")
+        last_step = evaluation_results
+
     # --- STEP 4: BUILD_UI_AND_HOST_UI_IN_FIREBASE ---
     logger.info("--- BIG STEP: BUILD_AND_DEPLOY_UI_TO_FIREBASE ---")
     
     # Build the UI if the dist directory doesn't already exist
-    ui_dist_path = build_ui_for_firebase_step(after=[endpoint_test_status])
+    ui_dist_path = build_ui_for_firebase_step(after=[last_step])
     
     # Host the UI in Firebase
     firebase_deployment_info = deploy_ui_to_firebase(

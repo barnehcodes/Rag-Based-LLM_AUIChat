@@ -1,0 +1,161 @@
+{
+  "system_a": {
+    "wins": 0,
+    "average_metrics": {
+      "context_precision": 0.0,
+      "context_recall": 0.0,
+      "faithfulness": 0.0,
+      "answer_relevancy": 0.0,
+      "avg_latency": 0.028348684310913086
+    }
+  },
+  "system_b": {
+    "wins": 0,
+    "average_metrics": {
+      "context_precision": 0.0,
+      "context_recall": 0.0,
+      "faithfulness": 0.0,
+      "answer_relevancy": 0.0,
+      "avg_latency": 0.037300729751586915
+    }
+  },
+  "ties": 5,
+  "overall_winner": "tie",
+  "detailed_results": [
+    {
+      "question": "What are the counseling services available at AUI?",
+      "reference_answer": "AUI offers individual counseling, group counseling, and crisis intervention services to students. These services are confidential and aim to support students' mental health and well-being during their academic journey.",
+      "system_a": {
+        "answer": "Empty Response",
+        "metrics": {
+          "context_precision": 0.0,
+          "context_recall": 0.0,
+          "faithfulness": 0.0,
+          "answer_relevancy": 0.0
+        },
+        "latency": 0.062044382095336914,
+        "contexts": []
+      },
+      "system_b": {
+        "answer": "Empty Response",
+        "metrics": {
+          "context_precision": 0.0,
+          "context_recall": 0.0,
+          "faithfulness": 0.0,
+          "answer_relevancy": 0.0
+        },
+        "latency": 0.028412580490112305,
+        "contexts": []
+      },
+      "winner": "tie"
+    },
+    {
+      "question": "What is the process for undergraduate admission as a transfer student?",
+      "reference_answer": "Transfer students need to submit official transcripts from all previously attended institutions, a completed application form, and meet the minimum GPA requirement of 2.5. Transfer credits are evaluated on a course-by-course basis, and students may be required to take placement tests.",
+      "system_a": {
+        "answer": "Empty Response",
+        "metrics": {
+          "context_precision": 0.0,
+          "context_recall": 0.0,
+          "faithfulness": 0.0,
+          "answer_relevancy": 0.0
+        },
+        "latency": 0.022461414337158203,
+        "contexts": []
+      },
+      "system_b": {
+        "answer": "Empty Response",
+        "metrics": {
+          "context_precision": 0.0,
+          "context_recall": 0.0,
+          "faithfulness": 0.0,
+          "answer_relevancy": 0.0
+        },
+        "latency": 0.018141984939575195,
+        "contexts": []
+      },
+      "winner": "tie"
+    },
+    {
+      "question": "What are the program requirements for PiP 24-25?",
+      "reference_answer": "The PiP (Partners in Progress) 24-25 program requires students to maintain a minimum GPA of 3.0, complete 30 hours of community service per semester, attend bi-weekly seminars, and submit a final capstone project. Students must also participate in one international exchange or internship during the program.",
+      "system_a": {
+        "answer": "Empty Response",
+        "metrics": {
+          "context_precision": 0.0,
+          "context_recall": 0.0,
+          "faithfulness": 0.0,
+          "answer_relevancy": 0.0
+        },
+        "latency": 0.02271103858947754,
+        "contexts": []
+      },
+      "system_b": {
+        "answer": "Empty Response",
+        "metrics": {
+          "context_precision": 0.0,
+          "context_recall": 0.0,
+          "faithfulness": 0.0,
+          "answer_relevancy": 0.0
+        },
+        "latency": 0.018171310424804688,
+        "contexts": []
+      },
+      "winner": "tie"
+    },
+    {
+      "question": "What is the deadline for undergraduate admission applications?",
+      "reference_answer": "The deadline for Fall semester undergraduate applications is April 15, while the deadline for Spring semester is November 15. Early decision applicants must submit their applications by February 1 for the Fall semester.",
+      "system_a": {
+        "answer": "Empty Response",
+        "metrics": {
+          "context_precision": 0.0,
+          "context_recall": 0.0,
+          "faithfulness": 0.0,
+          "answer_relevancy": 0.0
+        },
+        "latency": 0.01862311363220215,
+        "contexts": []
+      },
+      "system_b": {
+        "answer": "Empty Response",
+        "metrics": {
+          "context_precision": 0.0,
+          "context_recall": 0.0,
+          "faithfulness": 0.0,
+          "answer_relevancy": 0.0
+        },
+        "latency": 0.015893220901489258,
+        "contexts": []
+      },
+      "winner": "tie"
+    },
+    {
+      "question": "What are the housing options for students at AUI?",
+      "reference_answer": "AUI provides several housing options including traditional dormitories, apartments, and university-owned houses. First-year students typically live in shared dormitory rooms, while upper-class students can choose from apartment-style housing or university houses. Off-campus housing options are also available in nearby Ifrane.",
+      "system_a": {
+        "answer": "Empty Response",
+        "metrics": {
+          "context_precision": 0.0,
+          "context_recall": 0.0,
+          "faithfulness": 0.0,
+          "answer_relevancy": 0.0
+        },
+        "latency": 0.015903472900390625,
+        "contexts": []
+      },
+      "system_b": {
+        "answer": "Empty Response",
+        "metrics": {
+          "context_precision": 0.0,
+          "context_recall": 0.0,
+          "faithfulness": 0.0,
+          "answer_relevancy": 0.0
+        },
+        "latency": 0.10588455200195312,
+        "contexts": []
+      },
+      "winner": "tie"
+    }
+  ]
+}

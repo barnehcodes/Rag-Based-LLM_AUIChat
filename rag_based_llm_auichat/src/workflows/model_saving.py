@@ -15,8 +15,8 @@ import mlflow.pyfunc
 from llama_index.core import VectorStoreIndex, Settings, PromptTemplate
 # Ensure these can be initialized correctly in the Seldon environment
 # Remove QDRANT_PORT as it's not used for cloud Qdrant and not in config.py
-from src.workflows.config.config import qdrant_client, embed_model, vector_store, COLLECTION_NAME, QDRANT_HOST 
-from src.engines.local_models.local_llm import LocalLLM 
+from rag_based_llm_auichat.src.workflows.config.config import qdrant_client, embed_model, vector_store, COLLECTION_NAME, QDRANT_HOST 
+from rag_based_llm_auichat.src.engines.local_models.local_llm import LocalLLM 
 
 # Configuration for the RAG model
 # MODEL_ID is used by LocalLLM, ensure it's defined or LocalLLM knows how to get it.

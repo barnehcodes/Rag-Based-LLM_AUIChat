@@ -1,17 +1,17 @@
 from zenml import step
 import json
 # Ensure config imports the correct, updated values
-from src.workflows.config.config import qdrant_client, COLLECTION_NAME, embed_model, vector_store, EMBED_DIM 
+from rag_based_llm_auichat.src.workflows.config.config import qdrant_client, COLLECTION_NAME, embed_model, vector_store, EMBED_DIM 
 from llama_index.core import VectorStoreIndex, Settings, PromptTemplate # Added PromptTemplate
 import os
 import mlflow
 import mlflow.sklearn  # or whichever flavor you're tracking
 
 # Import the local model handler instead of the HuggingFace API
-from src.engines.local_models.local_llm import LocalLLM
+from rag_based_llm_auichat.src.engines.local_models.local_llm import LocalLLM
 
 # Import constants from model_saving.py for consistency
-from src.workflows.model_saving import SIMILARITY_TOP_K, CUSTOM_QA_TEMPLATE_STR
+from rag_based_llm_auichat.src.workflows.model_saving import SIMILARITY_TOP_K, CUSTOM_QA_TEMPLATE_STR
 
 # Note: query_qdrant might be less relevant if queries only come via the UI/API
 # but can be kept for debugging or direct pipeline interaction if needed.

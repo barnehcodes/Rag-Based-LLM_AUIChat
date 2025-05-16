@@ -1,0 +1,11 @@
+
+MLflow Dashboard Instructions:
+=============================
+The MLflow UI dashboard is running on port 5001.
+You can access it at: http://localhost:5001
+
+If the dashboard is not accessible, check the log file:
+/home/barneh/Rag-Based-LLM_AUIChat/rag_based_llm_auichat/notebooks/mlflow_ui.log
+
+To stop the dashboard, run:
+kill $(cat /home/barneh/Rag-Based-LLM_AUIChat/rag_based_llm_auichat/notebooks/mlflow_ui.pid)

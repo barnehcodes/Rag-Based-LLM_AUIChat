@@ -1,0 +1,16 @@
+{
+  "service_name": "auichat-rag-version-b",
+  "service_url": "",
+  "project_id": "deft-waters-458118-a3",
+  "region": "us-central1",
+  "image_name": "gcr.io/deft-waters-458118-a3/auichat-rag-version-b",
+  "version": "B",
+  "features": [
+    "Hybrid Retrieval (vector + BM25)",
+    "Query Reformulation",
+    "Advanced Re-ranking with cross-encoders",
+    "Multi-hop RAG architecture",
+    "Improved prompting",
+    "Better generation parameters"
+  ]
+}

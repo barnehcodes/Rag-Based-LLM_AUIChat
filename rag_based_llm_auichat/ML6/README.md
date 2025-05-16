@@ -1,34 +1,76 @@
-# RAG Evaluation with Vertex AI
+# AUI Chat RAG - Enhanced Deployment
 
-This directory contains tools for evaluating the AUIChat RAG system using Google Cloud Vertex AI.
+This directory contains tools for deploying and testing the enhanced version of the AUIChat RAG system. This implementation focuses on a standalone deployment with all advanced RAG features.
 
 ## Overview
 
-This implementation provides a centralized approach to evaluate the RAG system using Google Cloud's Vertex AI. The evaluation:
+The enhanced RAG system includes the following improvements:
 
-1. Registers your existing Cloud Run RAG service as a model in Vertex AI Model Registry
-2. Evaluates key RAG metrics (Context Precision, Context Recall, Faithfulness, Answer Relevancy)
-3. Stores evaluation results in Cloud Storage
-4. Can be run on-demand or scheduled automatically
+1. **Hybrid Retrieval**: Combines vector-based and BM25 keyword-based retrieval for better results
+2. **Query Reformulation**: Improves query understanding with T5-based reformulation
+3. **Advanced Re-ranking**: Uses cross-encoder models to improve search result ranking
+4. **Multi-hop RAG**: Performs follow-up queries for complex questions
+5. **Improved Prompting**: Better instructions for the LLM
+6. **Generation Parameters**: Lower temperature (0.3) for improved factuality
 
 ## Files
 
-- `vertex_ai_evaluation.py` - Core module with evaluation functions
-- `run_vertex_evaluation.py` - Standalone script for running evaluations
-- `setup_vertex_evaluation.sh` - Script to set up automated evaluation with Cloud Functions & Scheduler
-- `vertex_ai_requirements.txt` - Python dependencies for Vertex AI integration
+- `deploy_version_b.py` - Script to deploy Version B to Google Cloud Run
+- `test_version_b_locally.py` - Script to test Version B without deploying
 
-## Integration with ZenML
+## Deployment Instructions
 
-A step has been added to the cloud deployment pipeline in `src/workflows/vertex_evaluation_step.py` that automatically runs evaluation after deployment.
-
-## Usage
-
-### Option 1: Run On-Demand Evaluation
+### Option 1: Deploy Version B to Cloud Run
 
 ```bash
-# Basic usage with default endpoint
-python run_vertex_evaluation.py
+# Deploy Version B to Cloud Run
+python deploy_version_b.py --preprocessed-nodes /home/barneh/Rag-Based-LLM_AUIChat/preprocessed_nodes.pkl
+
+# Specify a custom service name
+python deploy_version_b.py --service-name auichat-rag-custom-name --preprocessed-nodes /path/to/preprocessed_nodes.pkl
+
+# Specify a different project and region
+python deploy_version_b.py --project-id your-project-id --region us-west1 --preprocessed-nodes /path/to/preprocessed_nodes.pkl
+```
+
+### Option 2: Test Version B Locally
+
+```bash
+# Test the Version B enhancements locally before deployment
+python test_version_b_locally.py
+```
+
+## Calling the API
+
+Once deployed, you can call the API using curl:
+
+```bash
+curl -X POST https://auichat-rag-version-b-[HASH].a.run.app/predict \
+  -H "Content-Type: application/json" \
+  -d '{"query": "What are the admission requirements for AUI?"}'
+```
+
+## Implementation Notes
+
+### Local Docker Testing
+
+Before deploying to Cloud Run, you can test the deployment process locally:
+
+```bash
+# 1. Create a local testing directory
+mkdir -p /tmp/rag_deployment_test
+
+# 2. Run the deployment script with --local-only flag
+python deploy_version_b.py --preprocessed-nodes /path/to/preprocessed_nodes.pkl --local-only
+
+# 3. Build and run the container locally
+cd /tmp/rag_deployment_test
+docker build -t rag-version-b-test .
+docker run -p 8080:8080 -e PREPROCESSED_NODES=/app/preprocessed_nodes.pkl rag-version-b-test
+
+# 4. Test the locally running container
+curl -X POST http://localhost:8080/predict -H "Content-Type: application/json" -d '{"query": "What is AUI?"}'
+```
 
 # Specify custom endpoint and project
 python run_vertex_evaluation.py --endpoint https://your-endpoint.run.app/predict --project your-project-id
